@@ -17,6 +17,9 @@ var camera, scene, renderer, controls;
 let object;
 let isHighDetail = false; // Flag to track detail level
 let coordinateSystem; // Reference to the coordinate system
+let brainRegions = []; // Array to store brain region markers
+let brainRegionsGroup; // Group to hold brain region markers and labels
+let testPointsGroup; // Group to hold test point markers and labels
 
 // Performance stats
 let stats;
@@ -25,6 +28,45 @@ let simplifiedGeometry;
 
 // Track if the scene needs rendering
 let needsRender = true;
+
+// Define brain regions with MNI coordinates [name, x, y, z]
+const mniRegions = [
+  ["Visual Cortex", 10, -85, 5],
+  ["Motor Cortex", 30, -15, 60],
+  ["Broca's Area", -45, 20, 15],
+  ["Anterior Commissure", 0, 0, 0], // Origin point
+  ["Wernicke's Area", -52, -54, 22],
+  ["Hippocampus", 28, -24, -12],
+];
+
+// Define test points with MNI coordinates
+const testPoints = [
+  // Axis extremes
+  ["Anterior", 0, 80, 0],
+  ["Posterior", 0, -80, 0],
+  ["Left", -70, 0, 0],
+  ["Right", 70, 0, 0],
+  ["Superior", 0, 0, 75],
+  ["Inferior", 0, 0, -45],
+
+  // Corners
+  ["Front-Top-Left", -70, 80, 75],
+  ["Front-Top-Right", 70, 80, 75],
+  ["Back-Top-Left", -70, -80, 75],
+  ["Back-Top-Right", 70, -80, 75],
+  ["Front-Bottom-Left", -70, 80, -45],
+  ["Front-Bottom-Right", 70, 80, -45],
+  ["Back-Bottom-Left", -70, -80, -45],
+  ["Back-Bottom-Right", 70, -80, -45],
+
+  // Landmarks
+  ["Frontal Pole", 0, 70, 0],
+  ["Occipital Pole", 0, -75, 0],
+  ["Left Temporal Pole", -55, 10, -35],
+  ["Right Temporal Pole", 55, 10, -35],
+  ["Vertex", 0, 0, 70],
+  ["Cerebellum", 0, -45, -40],
+];
 
 function init() {
   var puthere = document.getElementById("brain");
@@ -53,6 +95,15 @@ function init() {
   coordinateSystem = new THREE.Group();
   scene.add(coordinateSystem);
   coordinateSystem.visible = true; // Ensure it's visible
+
+  // Create brain regions group
+  brainRegionsGroup = new THREE.Group();
+  scene.add(brainRegionsGroup);
+
+  // Create test points group
+  testPointsGroup = new THREE.Group();
+  scene.add(testPointsGroup);
+  testPointsGroup.visible = false; // Hidden by default
 
   function loadModel() {
     object.traverse(function (child) {
@@ -151,6 +202,9 @@ function init() {
 
   // Add render triggers
   addRenderTriggers();
+
+  // Add calibration controls
+  addCalibrationControls();
 }
 
 function onWindowResize() {
@@ -637,6 +691,12 @@ function updateCoordinateSystem() {
     addCoordinateSystemToggle();
   }
 
+  // Add brain regions after the coordinate system is set up
+  addBrainRegions();
+
+  // Add test points
+  addTestPoints();
+
   // Force a render to show the coordinate system
   forceRender();
 }
@@ -704,6 +764,360 @@ function addCoordinateSystemToggle() {
   button.addEventListener("click", function () {
     coordinateSystem.visible = !coordinateSystem.visible;
     this.textContent = coordinateSystem.visible ? "Hide Axes" : "Show Axes";
+    forceRender();
+  });
+
+  document.body.appendChild(button);
+}
+
+// Function to add brain regions based on MNI coordinates
+function addBrainRegions() {
+  // Clear any existing brain region markers
+  while (brainRegionsGroup.children.length > 0) {
+    brainRegionsGroup.remove(brainRegionsGroup.children[0]);
+  }
+
+  // Get the brain model's bounding box to scale appropriately
+  const box = new THREE.Box3().setFromObject(object);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+
+  // Position the brain regions group at the center of the brain
+  brainRegionsGroup.position.copy(center);
+
+  // Create a material for the brain region markers
+  const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+
+  // Add each brain region
+  mniRegions.forEach((region) => {
+    const [name, mniX, mniY, mniZ] = region;
+
+    // Convert MNI coordinates to model coordinates
+    const modelCoords = mniToModelCoordinates(mniX, mniY, mniZ, maxDim);
+
+    // Create a sphere to mark the region
+    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.04, 16, 16);
+    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+    marker.position.set(modelCoords.x, modelCoords.y, modelCoords.z);
+
+    // Add the marker to the brain regions group
+    brainRegionsGroup.add(marker);
+
+    // Add a label with the region name
+    addRegionLabel(name, modelCoords, maxDim);
+  });
+
+  // Add a toggle button for brain regions if it doesn't exist yet
+  if (!document.getElementById("regionsToggleBtn")) {
+    addBrainRegionsToggle();
+  }
+}
+
+// Function to convert MNI coordinates to model coordinates
+function mniToModelCoordinates(mniX, mniY, mniZ, maxDim) {
+  // Get calibration values from UI controls
+  const scale = parseFloat(document.getElementById("mniScale")?.value || 1);
+  const offsetX = parseFloat(document.getElementById("mniOffsetX")?.value || 0);
+  const offsetY = parseFloat(document.getElementById("mniOffsetY")?.value || 0);
+  const offsetZ = parseFloat(document.getElementById("mniOffsetZ")?.value || 0);
+
+  // Scale factor to convert MNI coordinates to model scale
+  // This is an approximation and may need adjustment based on your specific model
+  const scaleFactor = (maxDim / 200) * scale; // Assuming MNI space is roughly -100 to 100 in each dimension
+
+  // In MNI space:
+  // X increases from left to right
+  // Y increases from posterior to anterior
+  // Z increases from inferior to superior
+
+  // Convert to model coordinates with calibration adjustments
+  // Note: This transformation may need adjustment based on your model's orientation
+  return {
+    x: mniX * scaleFactor + (offsetX * maxDim) / 20,
+    y: mniZ * scaleFactor + (offsetY * maxDim) / 20, // Map MNI Z to model Y (vertical axis)
+    z: -mniY * scaleFactor + (offsetZ * maxDim) / 20, // Map MNI Y to model Z (with negation for orientation)
+  };
+}
+
+// Function to add a label for a brain region
+function addRegionLabel(text, position, maxDim) {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  canvas.width = 256;
+  canvas.height = 64;
+
+  // Set background to semi-transparent black for better readability
+  context.fillStyle = "rgba(0, 0, 0, 0.7)";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = "rgba(255, 255, 255, 0.8)";
+  context.lineWidth = 2;
+  context.strokeRect(0, 0, canvas.width, canvas.height);
+
+  // Draw text
+  context.font = "24px Arial";
+  context.fillStyle = "#ffffff";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+  // Create texture from canvas
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+
+  // Create sprite material with the texture
+  const material = new THREE.SpriteMaterial({ map: texture });
+
+  // Create sprite and position it
+  const sprite = new THREE.Sprite(material);
+  sprite.position.set(position.x, position.y + maxDim * 0.08, position.z); // Position above the marker
+  sprite.scale.set(0.8, 0.2, 1);
+
+  // Add to brain regions group
+  brainRegionsGroup.add(sprite);
+
+  return sprite;
+}
+
+// Add a toggle button for brain regions
+function addBrainRegionsToggle() {
+  const button = document.createElement("button");
+  button.id = "regionsToggleBtn";
+  button.textContent = "Toggle Regions";
+  button.style.position = "absolute";
+  button.style.bottom = "20px";
+  button.style.right = "280px"; // Position to the left of the axes toggle
+  button.style.zIndex = "100";
+  button.style.padding = "8px 12px";
+  button.style.backgroundColor = "#333";
+  button.style.color = "white";
+  button.style.border = "none";
+  button.style.borderRadius = "4px";
+  button.style.cursor = "pointer";
+  button.style.fontSize = "14px";
+  button.style.fontFamily = "Arial, sans-serif";
+  button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
+
+  button.addEventListener("click", function () {
+    brainRegionsGroup.visible = !brainRegionsGroup.visible;
+    this.textContent = brainRegionsGroup.visible
+      ? "Hide Regions"
+      : "Show Regions";
+    forceRender();
+  });
+
+  document.body.appendChild(button);
+}
+
+// Add a calibration tool to adjust MNI to model coordinate mapping
+function addCalibrationControls() {
+  const controlsDiv = document.createElement("div");
+  controlsDiv.id = "calibrationControls";
+  controlsDiv.style.position = "absolute";
+  controlsDiv.style.top = "50px";
+  controlsDiv.style.right = "10px";
+  controlsDiv.style.zIndex = "100";
+  controlsDiv.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+  controlsDiv.style.padding = "10px";
+  controlsDiv.style.borderRadius = "4px";
+  controlsDiv.style.color = "white";
+  controlsDiv.style.fontFamily = "Arial, sans-serif";
+  controlsDiv.style.fontSize = "14px";
+  controlsDiv.style.display = "none"; // Hidden by default
+
+  controlsDiv.innerHTML = `
+    <h3 style="margin-top: 0;">MNI Calibration</h3>
+    <div>
+      <label>Scale: </label>
+      <input type="range" id="mniScale" min="0.1" max="2" step="0.05" value="1">
+      <span id="mniScaleValue">1.00</span>
+    </div>
+    <div>
+      <label>X Offset: </label>
+      <input type="range" id="mniOffsetX" min="-10" max="10" step="0.5" value="0">
+      <span id="mniOffsetXValue">0.00</span>
+    </div>
+    <div>
+      <label>Y Offset: </label>
+      <input type="range" id="mniOffsetY" min="-10" max="10" step="0.5" value="0">
+      <span id="mniOffsetYValue">0.00</span>
+    </div>
+    <div>
+      <label>Z Offset: </label>
+      <input type="range" id="mniOffsetZ" min="-10" max="10" step="0.5" value="0">
+      <span id="mniOffsetZValue">0.00</span>
+    </div>
+    <button id="applyCalibration">Apply</button>
+  `;
+
+  document.body.appendChild(controlsDiv);
+
+  // Add calibration toggle button
+  const button = document.createElement("button");
+  button.id = "calibrationToggleBtn";
+  button.textContent = "Calibrate MNI";
+  button.style.position = "absolute";
+  button.style.bottom = "20px";
+  button.style.right = "410px"; // Position to the left of the regions toggle
+  button.style.zIndex = "100";
+  button.style.padding = "8px 12px";
+  button.style.backgroundColor = "#333";
+  button.style.color = "white";
+  button.style.border = "none";
+  button.style.borderRadius = "4px";
+  button.style.cursor = "pointer";
+  button.style.fontSize = "14px";
+  button.style.fontFamily = "Arial, sans-serif";
+  button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
+
+  button.addEventListener("click", function () {
+    const controlsDiv = document.getElementById("calibrationControls");
+    controlsDiv.style.display =
+      controlsDiv.style.display === "none" ? "block" : "none";
+  });
+
+  document.body.appendChild(button);
+
+  // Add event listeners for calibration controls
+  document.getElementById("mniScale").addEventListener("input", function () {
+    document.getElementById("mniScaleValue").textContent = parseFloat(
+      this.value
+    ).toFixed(2);
+  });
+
+  document.getElementById("mniOffsetX").addEventListener("input", function () {
+    document.getElementById("mniOffsetXValue").textContent = parseFloat(
+      this.value
+    ).toFixed(2);
+  });
+
+  document.getElementById("mniOffsetY").addEventListener("input", function () {
+    document.getElementById("mniOffsetYValue").textContent = parseFloat(
+      this.value
+    ).toFixed(2);
+  });
+
+  document.getElementById("mniOffsetZ").addEventListener("input", function () {
+    document.getElementById("mniOffsetZValue").textContent = parseFloat(
+      this.value
+    ).toFixed(2);
+  });
+
+  document
+    .getElementById("applyCalibration")
+    .addEventListener("click", function () {
+      // Update brain regions with new calibration
+      addBrainRegions();
+    });
+}
+
+// Function to add test points based on MNI coordinates
+function addTestPoints() {
+  // Clear any existing test point markers
+  while (testPointsGroup.children.length > 0) {
+    testPointsGroup.remove(testPointsGroup.children[0]);
+  }
+
+  // Get the brain model's bounding box to scale appropriately
+  const box = new THREE.Box3().setFromObject(object);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+
+  // Position the test points group at the center of the brain
+  testPointsGroup.position.copy(center);
+
+  // Create a material for the test point markers (cyan color)
+  const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+
+  // Add each test point
+  testPoints.forEach((point) => {
+    const [name, mniX, mniY, mniZ] = point;
+
+    // Convert MNI coordinates to model coordinates
+    const modelCoords = mniToModelCoordinates(mniX, mniY, mniZ, maxDim);
+
+    // Create a sphere to mark the point
+    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.03, 12, 12); // Slightly smaller than brain regions
+    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+    marker.position.set(modelCoords.x, modelCoords.y, modelCoords.z);
+
+    // Add the marker to the test points group
+    testPointsGroup.add(marker);
+
+    // Add a label with the point name
+    addTestPointLabel(name, modelCoords, maxDim);
+  });
+
+  // Add a toggle button for test points if it doesn't exist yet
+  if (!document.getElementById("testPointsToggleBtn")) {
+    addTestPointsToggle();
+  }
+}
+
+// Function to add a label for a test point
+function addTestPointLabel(text, position, maxDim) {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  canvas.width = 256;
+  canvas.height = 64;
+
+  // Set background to semi-transparent black for better readability
+  context.fillStyle = "rgba(0, 0, 0, 0.7)";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = "rgba(0, 255, 255, 0.8)"; // Cyan border
+  context.lineWidth = 2;
+  context.strokeRect(0, 0, canvas.width, canvas.height);
+
+  // Draw text
+  context.font = "20px Arial"; // Slightly smaller than brain region labels
+  context.fillStyle = "#00ffff"; // Cyan text
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+  // Create texture from canvas
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+
+  // Create sprite material with the texture
+  const material = new THREE.SpriteMaterial({ map: texture });
+
+  // Create sprite and position it
+  const sprite = new THREE.Sprite(material);
+  sprite.position.set(position.x, position.y + maxDim * 0.06, position.z); // Position above the marker
+  sprite.scale.set(0.7, 0.18, 1); // Slightly smaller than brain region labels
+
+  // Add to test points group
+  testPointsGroup.add(sprite);
+
+  return sprite;
+}
+
+// Add a toggle button for test points
+function addTestPointsToggle() {
+  const button = document.createElement("button");
+  button.id = "testPointsToggleBtn";
+  button.textContent = "Show Test Points";
+  button.style.position = "absolute";
+  button.style.bottom = "20px";
+  button.style.right = "540px"; // Position to the left of the calibration button
+  button.style.zIndex = "100";
+  button.style.padding = "8px 12px";
+  button.style.backgroundColor = "#333";
+  button.style.color = "#00ffff"; // Cyan text to match the markers
+  button.style.border = "none";
+  button.style.borderRadius = "4px";
+  button.style.cursor = "pointer";
+  button.style.fontSize = "14px";
+  button.style.fontFamily = "Arial, sans-serif";
+  button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
+
+  button.addEventListener("click", function () {
+    testPointsGroup.visible = !testPointsGroup.visible;
+    this.textContent = testPointsGroup.visible
+      ? "Hide Test Points"
+      : "Show Test Points";
     forceRender();
   });
 
