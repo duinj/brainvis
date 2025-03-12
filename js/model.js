@@ -16,6 +16,7 @@ var camera, scene, renderer, controls;
 
 let object;
 let isHighDetail = false; // Flag to track detail level
+let showHalfBrain = false; // Flag to track if only half brain is shown
 let coordinateSystem; // Reference to the coordinate system
 let brainRegions = []; // Array to store brain region markers
 let brainRegionsGroup; // Group to hold brain region markers and labels
@@ -26,6 +27,7 @@ let brainOpacity = 1.0; // Default opacity for the brain model
 let stats;
 let originalGeometry;
 let simplifiedGeometry;
+let originalChildren = []; // Store original children to restore them
 
 // Track if the scene needs rendering
 let needsRender = true;
@@ -113,6 +115,18 @@ function init() {
 
     scene.add(object);
 
+    // Store original children for reference
+    originalChildren = [];
+    object.traverse(function (child) {
+      if (child.isMesh) {
+        originalChildren.push({
+          mesh: child,
+          position: child.position.clone(),
+          visible: child.visible,
+        });
+      }
+    });
+
     // Now that the model is loaded, update the coordinate system
     updateCoordinateSystem();
   }
@@ -160,7 +174,7 @@ function init() {
       // Store original geometry for reference
       object.traverse(function (child) {
         if (child.isMesh) {
-          originalGeometry = child.geometry;
+          originalGeometry = child.geometry.clone(); // Clone to ensure we have a clean copy
 
           // Create simplified geometry with fewer vertices
           simplifyGeometry(child);
@@ -169,6 +183,9 @@ function init() {
 
       // Add detail toggle button
       addDetailToggle();
+
+      // Add half brain toggle button
+      addHalfBrainToggle();
     },
     onProgress,
     onError
@@ -241,6 +258,11 @@ function render() {
 function simplifyGeometry(mesh) {
   const geometry = mesh.geometry;
 
+  // Store the original geometry if not already stored
+  if (!originalGeometry) {
+    originalGeometry = geometry.clone();
+  }
+
   // Create a simplified version by sampling vertices
   const positions = geometry.getAttribute("position").array;
   const normals = geometry.getAttribute("normal").array;
@@ -254,21 +276,24 @@ function simplifyGeometry(mesh) {
   const newNormals = [];
   const newUvs = [];
 
-  for (let i = 0; i < positions.length; i += 9 * reduction) {
-    // 9 = 3 vertices (triangle) * 3 components (x,y,z)
-    // Keep one triangle out of every 'reduction' triangles
-    for (let j = 0; j < 9; j++) {
-      if (i + j < positions.length) {
-        newPositions.push(positions[i + j]);
-        newNormals.push(normals[i + j]);
+  // Process all triangles to maintain the complete model
+  for (let i = 0; i < positions.length; i += 9) {
+    // Process every 'reduction'th triangle
+    if (Math.floor(i / 9) % reduction === 0) {
+      // Add this triangle
+      for (let j = 0; j < 9; j++) {
+        if (i + j < positions.length) {
+          newPositions.push(positions[i + j]);
+          newNormals.push(normals[i + j]);
+        }
       }
-    }
 
-    if (uvs) {
-      for (let j = 0; j < 6; j++) {
-        // 6 = 3 vertices * 2 components (u,v)
-        if ((i / 3) * 2 + j < uvs.length) {
-          newUvs.push(uvs[(i / 3) * 2 + j]);
+      if (uvs) {
+        const uvIndex = Math.floor(i / 3) * 2;
+        for (let j = 0; j < 6; j++) {
+          if (uvIndex + j < uvs.length) {
+            newUvs.push(uvs[uvIndex + j]);
+          }
         }
       }
     }
@@ -295,6 +320,64 @@ function simplifyGeometry(mesh) {
   mesh.geometry = simplifiedGeometry;
 }
 
+// Function to simplify geometry with a specific reduction factor
+function simplifyGeometryWithFactor(mesh, factor) {
+  // Use the original geometry as the source
+  const positions = originalGeometry.getAttribute("position").array;
+  const normals = originalGeometry.getAttribute("normal").array;
+  const uvs = originalGeometry.getAttribute("uv")
+    ? originalGeometry.getAttribute("uv").array
+    : null;
+
+  // Reduce vertex count by sampling (keep every Nth vertex)
+  const reduction = factor; // Keep 1/factor of vertices
+  const newPositions = [];
+  const newNormals = [];
+  const newUvs = [];
+
+  // Process all triangles to maintain the complete model
+  for (let i = 0; i < positions.length; i += 9) {
+    // Process every 'reduction'th triangle
+    if (Math.floor(i / 9) % reduction === 0) {
+      // Add this triangle
+      for (let j = 0; j < 9; j++) {
+        if (i + j < positions.length) {
+          newPositions.push(positions[i + j]);
+          newNormals.push(normals[i + j]);
+        }
+      }
+
+      if (uvs) {
+        const uvIndex = Math.floor(i / 3) * 2;
+        for (let j = 0; j < 6; j++) {
+          if (uvIndex + j < uvs.length) {
+            newUvs.push(uvs[uvIndex + j]);
+          }
+        }
+      }
+    }
+  }
+
+  // Create new geometry with reduced data
+  const reducedGeometry = new THREE.BufferGeometry();
+  reducedGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(newPositions, 3)
+  );
+  reducedGeometry.setAttribute(
+    "normal",
+    new THREE.Float32BufferAttribute(newNormals, 3)
+  );
+  if (uvs && newUvs.length > 0) {
+    reducedGeometry.setAttribute(
+      "uv",
+      new THREE.Float32BufferAttribute(newUvs, 2)
+    );
+  }
+
+  return reducedGeometry;
+}
+
 // Add button to toggle detail level
 function addDetailToggle() {
   const button = document.createElement("button");
@@ -317,8 +400,10 @@ function addDetailToggle() {
   button.addEventListener("click", function () {
     isHighDetail = !isHighDetail;
 
+    // Apply the appropriate geometry to all meshes
     object.traverse(function (child) {
       if (child.isMesh) {
+        // Make sure we're not changing visibility, just geometry
         child.geometry = isHighDetail ? originalGeometry : simplifiedGeometry;
       }
     });
@@ -326,6 +411,75 @@ function addDetailToggle() {
     button.textContent = isHighDetail
       ? "Switch to Low Detail"
       : "Switch to High Detail";
+
+    // Force a render to show the changes
+    forceRender();
+  });
+
+  document.body.appendChild(button);
+}
+
+// Add button to toggle half brain view
+function addHalfBrainToggle() {
+  const button = document.createElement("button");
+  button.id = "halfBrainToggleBtn";
+  button.textContent = "Show Half Brain";
+  button.style.position = "absolute";
+  button.style.bottom = "60px";
+  button.style.right = "20px";
+  button.style.zIndex = "100";
+  button.style.padding = "8px 12px";
+  button.style.backgroundColor = "#333";
+  button.style.color = "white";
+  button.style.border = "none";
+  button.style.borderRadius = "4px";
+  button.style.cursor = "pointer";
+  button.style.fontSize = "14px";
+  button.style.fontFamily = "Arial, sans-serif";
+  button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
+
+  button.addEventListener("click", function () {
+    showHalfBrain = !showHalfBrain;
+
+    if (showHalfBrain) {
+      // Create a clipping plane for the right half of the brain
+      const clipPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+
+      // Apply the clipping plane to all meshes
+      object.traverse(function (child) {
+        if (child.isMesh) {
+          // Create a new material that clones the current one but adds clipping
+          const newMaterial = child.material.clone();
+          newMaterial.clippingPlanes = [clipPlane];
+          newMaterial.clipShadows = true;
+          newMaterial.needsUpdate = true;
+
+          // Store the original material
+          child.userData.originalMaterial = child.material;
+
+          // Apply the new material
+          child.material = newMaterial;
+        }
+      });
+
+      // Enable clipping in the renderer
+      renderer.localClippingEnabled = true;
+
+      button.textContent = "Show Full Brain";
+    } else {
+      // Restore original materials
+      object.traverse(function (child) {
+        if (child.isMesh && child.userData.originalMaterial) {
+          child.material = child.userData.originalMaterial;
+          delete child.userData.originalMaterial;
+        }
+      });
+
+      // Disable clipping in the renderer
+      renderer.localClippingEnabled = false;
+
+      button.textContent = "Show Half Brain";
+    }
 
     // Force a render to show the changes
     forceRender();
@@ -408,6 +562,17 @@ function addQualitySelector() {
   selector.addEventListener("change", function () {
     const quality = this.value;
 
+    // Save current visibility state of all meshes
+    const visibilityState = [];
+    object.traverse(function (child) {
+      if (child.isMesh) {
+        visibilityState.push({
+          mesh: child,
+          visible: child.visible,
+        });
+      }
+    });
+
     switch (quality) {
       case "low":
         // Very low detail for maximum performance
@@ -442,66 +607,16 @@ function addQualitySelector() {
         break;
     }
 
+    // Restore visibility state
+    visibilityState.forEach((item) => {
+      item.mesh.visible = item.visible;
+    });
+
     // Force a render to show the changes
     forceRender();
   });
 
   document.body.appendChild(selector);
-}
-
-// Function to simplify geometry with a specific reduction factor
-function simplifyGeometryWithFactor(mesh, factor) {
-  const geometry = originalGeometry;
-
-  // Create a simplified version by sampling vertices
-  const positions = geometry.getAttribute("position").array;
-  const normals = geometry.getAttribute("normal").array;
-  const uvs = geometry.getAttribute("uv")
-    ? geometry.getAttribute("uv").array
-    : null;
-
-  // Reduce vertex count by sampling (keep every Nth vertex)
-  const reduction = factor; // Keep 1/factor of vertices
-  const newPositions = [];
-  const newNormals = [];
-  const newUvs = [];
-
-  for (let i = 0; i < positions.length; i += 9 * reduction) {
-    // Keep one triangle out of every 'reduction' triangles
-    for (let j = 0; j < 9; j++) {
-      if (i + j < positions.length) {
-        newPositions.push(positions[i + j]);
-        newNormals.push(normals[i + j]);
-      }
-    }
-
-    if (uvs) {
-      for (let j = 0; j < 6; j++) {
-        if ((i / 3) * 2 + j < uvs.length) {
-          newUvs.push(uvs[(i / 3) * 2 + j]);
-        }
-      }
-    }
-  }
-
-  // Create new geometry with reduced data
-  const reducedGeometry = new THREE.BufferGeometry();
-  reducedGeometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(newPositions, 3)
-  );
-  reducedGeometry.setAttribute(
-    "normal",
-    new THREE.Float32BufferAttribute(newNormals, 3)
-  );
-  if (uvs && newUvs.length > 0) {
-    reducedGeometry.setAttribute(
-      "uv",
-      new THREE.Float32BufferAttribute(newUvs, 2)
-    );
-  }
-
-  return reducedGeometry;
 }
 
 // Force render on any user interaction
