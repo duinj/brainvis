@@ -37,7 +37,7 @@ function init() {
     0.1,
     2000
   );
-  camera.position.z = 30;
+  camera.position.z = 50; // Increased from 30 to 50 to start more zoomed out
 
   scene = new THREE.Scene();
   scene.matrixAutoUpdate = false; // Disable automatic matrix updates for static objects
@@ -240,17 +240,21 @@ function simplifyGeometry(mesh) {
 // Add button to toggle detail level
 function addDetailToggle() {
   const button = document.createElement("button");
+  button.id = "detailToggleBtn";
   button.textContent = "Toggle Detail";
   button.style.position = "absolute";
   button.style.bottom = "20px";
   button.style.right = "20px";
   button.style.zIndex = "100";
-  button.style.padding = "10px";
+  button.style.padding = "8px 12px";
   button.style.backgroundColor = "#333";
   button.style.color = "white";
   button.style.border = "none";
-  button.style.borderRadius = "5px";
+  button.style.borderRadius = "4px";
   button.style.cursor = "pointer";
+  button.style.fontSize = "14px";
+  button.style.fontFamily = "Arial, sans-serif";
+  button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
 
   button.addEventListener("click", function () {
     isHighDetail = !isHighDetail;
@@ -264,6 +268,9 @@ function addDetailToggle() {
     button.textContent = isHighDetail
       ? "Switch to Low Detail"
       : "Switch to High Detail";
+
+    // Force a render to show the changes
+    forceRender();
   });
 
   document.body.appendChild(button);
@@ -310,6 +317,7 @@ function addFpsCounter() {
 // Add quality selector
 function addQualitySelector() {
   const selector = document.createElement("select");
+  selector.id = "qualitySelector";
   selector.style.position = "absolute";
   selector.style.top = "10px";
   selector.style.right = "10px";
@@ -318,7 +326,10 @@ function addQualitySelector() {
   selector.style.backgroundColor = "#333";
   selector.style.color = "white";
   selector.style.border = "none";
-  selector.style.borderRadius = "5px";
+  selector.style.borderRadius = "4px";
+  selector.style.fontSize = "14px";
+  selector.style.fontFamily = "Arial, sans-serif";
+  selector.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
 
   const options = [
     { value: "low", text: "Low Quality (Fast)" },
@@ -372,6 +383,9 @@ function addQualitySelector() {
         renderer.setPixelRatio(window.devicePixelRatio);
         break;
     }
+
+    // Force a render to show the changes
+    forceRender();
   });
 
   document.body.appendChild(selector);
@@ -675,7 +689,7 @@ function addCoordinateSystemToggle() {
   button.textContent = "Toggle Axes";
   button.style.position = "absolute";
   button.style.bottom = "20px"; // Position at bottom
-  button.style.right = "20px"; // Position at right
+  button.style.right = "150px"; // Moved to the left to make room for quality toggle
   button.style.zIndex = "100";
   button.style.padding = "8px 12px"; // Smaller padding
   button.style.backgroundColor = "#333";
