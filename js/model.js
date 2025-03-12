@@ -20,6 +20,7 @@ let coordinateSystem; // Reference to the coordinate system
 let brainRegions = []; // Array to store brain region markers
 let brainRegionsGroup; // Group to hold brain region markers and labels
 let testPointsGroup; // Group to hold test point markers and labels
+let brainOpacity = 1.0; // Default opacity for the brain model
 
 // Performance stats
 let stats;
@@ -205,6 +206,9 @@ function init() {
 
   // Add calibration controls
   addCalibrationControls();
+
+  // Add transparency control
+  addTransparencyControl();
 }
 
 function onWindowResize() {
@@ -787,7 +791,12 @@ function addBrainRegions() {
   brainRegionsGroup.position.copy(center);
 
   // Create a material for the brain region markers
-  const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  const markerMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffff00,
+    transparent: true,
+    opacity: 1.0,
+    depthTest: false, // Make markers visible through the brain
+  });
 
   // Add each brain region
   mniRegions.forEach((region) => {
@@ -866,7 +875,10 @@ function addRegionLabel(text, position, maxDim) {
   texture.needsUpdate = true;
 
   // Create sprite material with the texture
-  const material = new THREE.SpriteMaterial({ map: texture });
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    depthTest: false, // Make labels visible through the brain
+  });
 
   // Create sprite and position it
   const sprite = new THREE.Sprite(material);
@@ -1028,7 +1040,12 @@ function addTestPoints() {
   testPointsGroup.position.copy(center);
 
   // Create a material for the test point markers (cyan color)
-  const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+  const markerMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ffff,
+    transparent: true,
+    opacity: 1.0,
+    depthTest: false, // Make markers visible through the brain
+  });
 
   // Add each test point
   testPoints.forEach((point) => {
@@ -1081,7 +1098,10 @@ function addTestPointLabel(text, position, maxDim) {
   texture.needsUpdate = true;
 
   // Create sprite material with the texture
-  const material = new THREE.SpriteMaterial({ map: texture });
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    depthTest: false, // Make labels visible through the brain
+  });
 
   // Create sprite and position it
   const sprite = new THREE.Sprite(material);
@@ -1122,6 +1142,59 @@ function addTestPointsToggle() {
   });
 
   document.body.appendChild(button);
+}
+
+// Function to update the brain model's opacity
+function updateBrainOpacity(opacity) {
+  brainOpacity = opacity;
+
+  // Update the material of all meshes in the brain model
+  object.traverse(function (child) {
+    if (child.isMesh) {
+      // Make sure material is set to be transparent
+      child.material.transparent = true;
+      child.material.opacity = opacity;
+      child.material.needsUpdate = true;
+    }
+  });
+
+  // Force a render to show the changes
+  forceRender();
+}
+
+// Add a transparency control slider
+function addTransparencyControl() {
+  const controlDiv = document.createElement("div");
+  controlDiv.id = "transparencyControl";
+  controlDiv.style.position = "absolute";
+  controlDiv.style.bottom = "60px";
+  controlDiv.style.left = "10px";
+  controlDiv.style.zIndex = "100";
+  controlDiv.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+  controlDiv.style.padding = "10px";
+  controlDiv.style.borderRadius = "4px";
+  controlDiv.style.color = "white";
+  controlDiv.style.fontFamily = "Arial, sans-serif";
+  controlDiv.style.fontSize = "14px";
+
+  controlDiv.innerHTML = `
+    <div style="display: flex; align-items: center;">
+      <label style="margin-right: 10px;">Brain Opacity: </label>
+      <input type="range" id="opacitySlider" min="0" max="1" step="0.05" value="1" style="width: 150px;">
+      <span id="opacityValue" style="margin-left: 10px;">1.00</span>
+    </div>
+  `;
+
+  document.body.appendChild(controlDiv);
+
+  // Add event listener for the opacity slider
+  document
+    .getElementById("opacitySlider")
+    .addEventListener("input", function () {
+      const opacity = parseFloat(this.value);
+      document.getElementById("opacityValue").textContent = opacity.toFixed(2);
+      updateBrainOpacity(opacity);
+    });
 }
 
 init();
