@@ -466,14 +466,14 @@ function updateCoordinateSystem() {
   // Position the coordinate system at the center of the brain
   coordinateSystem.position.copy(center);
 
-  // Define the length of the axes (make them longer for better visibility)
-  const axisLength = maxDim * 1.5;
+  // Define the length of the axes (make them more proportional to the brain)
+  const axisLength = maxDim * 1.2; // Reduced from 1.5 to 1.2 for more subtle appearance
 
-  // Create axes using cylinders instead of lines for better visibility
+  // Create axes using cylinders instead of lines for better visibility but thinner
   // X axis (red)
   const xAxisGeometry = new THREE.CylinderGeometry(
-    maxDim * 0.02,
-    maxDim * 0.02,
+    maxDim * 0.01, // Thinner cylinder (reduced from 0.02)
+    maxDim * 0.01,
     axisLength,
     8
   );
@@ -484,8 +484,8 @@ function updateCoordinateSystem() {
 
   // Y axis (green)
   const yAxisGeometry = new THREE.CylinderGeometry(
-    maxDim * 0.02,
-    maxDim * 0.02,
+    maxDim * 0.01, // Thinner
+    maxDim * 0.01,
     axisLength,
     8
   );
@@ -495,8 +495,8 @@ function updateCoordinateSystem() {
 
   // Z axis (blue)
   const zAxisGeometry = new THREE.CylinderGeometry(
-    maxDim * 0.02,
-    maxDim * 0.02,
+    maxDim * 0.01, // Thinner
+    maxDim * 0.01,
     axisLength,
     8
   );
@@ -510,22 +510,22 @@ function updateCoordinateSystem() {
   coordinateSystem.add(yAxis);
   coordinateSystem.add(zAxis);
 
-  // Add cone tips to the axes for better direction indication
+  // Add cone tips to the axes for better direction indication (smaller)
   // X axis tip
-  const xTipGeometry = new THREE.ConeGeometry(maxDim * 0.05, maxDim * 0.15, 8);
+  const xTipGeometry = new THREE.ConeGeometry(maxDim * 0.03, maxDim * 0.1, 8); // Smaller cone
   xTipGeometry.rotateZ(-Math.PI / 2);
   const xTipMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
   const xTip = new THREE.Mesh(xTipGeometry, xTipMaterial);
   xTip.position.set(axisLength, 0, 0);
 
   // Y axis tip
-  const yTipGeometry = new THREE.ConeGeometry(maxDim * 0.05, maxDim * 0.15, 8);
+  const yTipGeometry = new THREE.ConeGeometry(maxDim * 0.03, maxDim * 0.1, 8); // Smaller cone
   const yTipMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
   const yTip = new THREE.Mesh(yTipGeometry, yTipMaterial);
   yTip.position.set(0, axisLength, 0);
 
   // Z axis tip
-  const zTipGeometry = new THREE.ConeGeometry(maxDim * 0.05, maxDim * 0.15, 8);
+  const zTipGeometry = new THREE.ConeGeometry(maxDim * 0.03, maxDim * 0.1, 8); // Smaller cone
   zTipGeometry.rotateX(Math.PI / 2);
   const zTipMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
   const zTip = new THREE.Mesh(zTipGeometry, zTipMaterial);
@@ -536,16 +536,16 @@ function updateCoordinateSystem() {
   coordinateSystem.add(yTip);
   coordinateSystem.add(zTip);
 
-  // Add numerical markers along each axis
-  const markerCount = 5; // Number of markers per axis
+  // Add numerical markers along each axis (fewer and smaller)
+  const markerCount = 4; // Reduced from 5 to 4
   const markerStep = axisLength / markerCount;
 
   // Create markers for X axis
   for (let i = 1; i <= markerCount; i++) {
     const position = i * markerStep;
 
-    // Create a sphere as a marker
-    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.04, 16, 16);
+    // Create a smaller sphere as a marker
+    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.025, 12, 12); // Smaller spheres
     const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
     const marker = new THREE.Mesh(markerGeometry, markerMaterial);
     marker.position.set(position, 0, 0);
@@ -555,7 +555,7 @@ function updateCoordinateSystem() {
     // Add text label with the number
     addTextLabel(
       i.toString(),
-      new THREE.Vector3(position, -maxDim * 0.1, 0),
+      new THREE.Vector3(position, -maxDim * 0.07, 0), // Closer to axis
       0xff0000
     );
   }
@@ -564,7 +564,7 @@ function updateCoordinateSystem() {
   for (let i = 1; i <= markerCount; i++) {
     const position = i * markerStep;
 
-    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.04, 16, 16);
+    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.025, 12, 12); // Smaller spheres
     const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
     const marker = new THREE.Mesh(markerGeometry, markerMaterial);
     marker.position.set(0, position, 0);
@@ -574,7 +574,7 @@ function updateCoordinateSystem() {
     // Add text label with the number
     addTextLabel(
       i.toString(),
-      new THREE.Vector3(-maxDim * 0.1, position, 0),
+      new THREE.Vector3(-maxDim * 0.07, position, 0), // Closer to axis
       0x00ff00
     );
   }
@@ -583,7 +583,7 @@ function updateCoordinateSystem() {
   for (let i = 1; i <= markerCount; i++) {
     const position = i * markerStep;
 
-    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.04, 16, 16);
+    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.025, 12, 12); // Smaller spheres
     const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
     const marker = new THREE.Mesh(markerGeometry, markerMaterial);
     marker.position.set(0, 0, position);
@@ -593,27 +593,27 @@ function updateCoordinateSystem() {
     // Add text label with the number
     addTextLabel(
       i.toString(),
-      new THREE.Vector3(0, -maxDim * 0.1, position),
+      new THREE.Vector3(0, -maxDim * 0.07, position), // Closer to axis
       0x0000ff
     );
   }
 
-  // Add axis labels
+  // Add axis labels (smaller)
   addTextLabel(
     "X",
-    new THREE.Vector3(axisLength + maxDim * 0.2, 0, 0),
+    new THREE.Vector3(axisLength + maxDim * 0.15, 0, 0), // Closer to axis end
     0xff0000,
     true
   );
   addTextLabel(
     "Y",
-    new THREE.Vector3(0, axisLength + maxDim * 0.2, 0),
+    new THREE.Vector3(0, axisLength + maxDim * 0.15, 0), // Closer to axis end
     0x00ff00,
     true
   );
   addTextLabel(
     "Z",
-    new THREE.Vector3(0, 0, axisLength + maxDim * 0.2),
+    new THREE.Vector3(0, 0, axisLength + maxDim * 0.15), // Closer to axis end
     0x0000ff,
     true
   );
@@ -631,17 +631,17 @@ function updateCoordinateSystem() {
 function addTextLabel(text, position, color, isLarge = false) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
-  canvas.width = 256; // Larger canvas for better text quality
-  canvas.height = 128;
+  canvas.width = 128; // Smaller canvas (reduced from 256)
+  canvas.height = 64; // Smaller canvas (reduced from 128)
 
   // Set background to transparent
   context.fillStyle = "rgba(0, 0, 0, 0)";
   context.fillRect(0, 0, canvas.width, canvas.height);
 
   // Draw text with a black outline for better visibility
-  context.font = isLarge ? "80px Arial" : "64px Arial"; // Larger font
+  context.font = isLarge ? "48px Arial" : "36px Arial"; // Smaller font
   context.strokeStyle = "black";
-  context.lineWidth = 4;
+  context.lineWidth = 3; // Thinner outline
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.strokeText(text, canvas.width / 2, canvas.height / 2);
@@ -660,7 +660,7 @@ function addTextLabel(text, position, color, isLarge = false) {
   // Create sprite and position it
   const sprite = new THREE.Sprite(material);
   sprite.position.copy(position);
-  sprite.scale.set(isLarge ? 1.0 : 0.7, isLarge ? 0.5 : 0.35, 1); // Larger scale
+  sprite.scale.set(isLarge ? 0.6 : 0.4, isLarge ? 0.3 : 0.2, 1); // Smaller scale
 
   // Add to coordinate system
   coordinateSystem.add(sprite);
@@ -672,20 +672,24 @@ function addTextLabel(text, position, color, isLarge = false) {
 function addCoordinateSystemToggle() {
   const button = document.createElement("button");
   button.id = "coordToggleBtn";
-  button.textContent = "Toggle Coordinate System";
+  button.textContent = "Toggle Axes";
   button.style.position = "absolute";
-  button.style.bottom = "60px"; // Position above the detail toggle button
-  button.style.right = "20px";
+  button.style.bottom = "20px"; // Position at bottom
+  button.style.right = "20px"; // Position at right
   button.style.zIndex = "100";
-  button.style.padding = "10px";
+  button.style.padding = "8px 12px"; // Smaller padding
   button.style.backgroundColor = "#333";
   button.style.color = "white";
   button.style.border = "none";
-  button.style.borderRadius = "5px";
+  button.style.borderRadius = "4px";
   button.style.cursor = "pointer";
+  button.style.fontSize = "14px"; // Smaller font
+  button.style.fontFamily = "Arial, sans-serif";
+  button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)"; // Add shadow for better visibility
 
   button.addEventListener("click", function () {
     coordinateSystem.visible = !coordinateSystem.visible;
+    this.textContent = coordinateSystem.visible ? "Hide Axes" : "Show Axes";
     forceRender();
   });
 
