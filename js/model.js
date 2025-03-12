@@ -16,6 +16,7 @@ var camera, scene, renderer, controls;
 
 let object;
 let isHighDetail = false; // Flag to track detail level
+let coordinateSystem; // Reference to the coordinate system
 
 // Performance stats
 let stats;
@@ -48,12 +49,20 @@ function init() {
   camera.add(pointLight);
   scene.add(camera);
 
+  // Create coordinate system first
+  coordinateSystem = new THREE.Group();
+  scene.add(coordinateSystem);
+  coordinateSystem.visible = true; // Ensure it's visible
+
   function loadModel() {
     object.traverse(function (child) {
       if (child.isMesh) child.material.map = texture;
     });
 
     scene.add(object);
+
+    // Now that the model is loaded, update the coordinate system
+    updateCoordinateSystem();
   }
 
   const manager = new THREE.LoadingManager(loadModel);
@@ -439,6 +448,248 @@ function addRenderTriggers() {
   renderer.domElement.addEventListener("pointerdown", forceRender);
   renderer.domElement.addEventListener("pointermove", forceRender);
   renderer.domElement.addEventListener("pointerup", forceRender);
+}
+
+// Function to create a coordinate system with axes and numerical markers
+function updateCoordinateSystem() {
+  // Clear any existing elements in the coordinate system
+  while (coordinateSystem.children.length > 0) {
+    coordinateSystem.remove(coordinateSystem.children[0]);
+  }
+
+  // Get the brain model's bounding box to scale the coordinate system appropriately
+  const box = new THREE.Box3().setFromObject(object);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+
+  // Position the coordinate system at the center of the brain
+  coordinateSystem.position.copy(center);
+
+  // Define the length of the axes (make them longer for better visibility)
+  const axisLength = maxDim * 1.5;
+
+  // Create axes using cylinders instead of lines for better visibility
+  // X axis (red)
+  const xAxisGeometry = new THREE.CylinderGeometry(
+    maxDim * 0.02,
+    maxDim * 0.02,
+    axisLength,
+    8
+  );
+  xAxisGeometry.rotateZ(-Math.PI / 2); // Rotate to align with X axis
+  const xAxisMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const xAxis = new THREE.Mesh(xAxisGeometry, xAxisMaterial);
+  xAxis.position.set(axisLength / 2, 0, 0);
+
+  // Y axis (green)
+  const yAxisGeometry = new THREE.CylinderGeometry(
+    maxDim * 0.02,
+    maxDim * 0.02,
+    axisLength,
+    8
+  );
+  const yAxisMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  const yAxis = new THREE.Mesh(yAxisGeometry, yAxisMaterial);
+  yAxis.position.set(0, axisLength / 2, 0);
+
+  // Z axis (blue)
+  const zAxisGeometry = new THREE.CylinderGeometry(
+    maxDim * 0.02,
+    maxDim * 0.02,
+    axisLength,
+    8
+  );
+  zAxisGeometry.rotateX(Math.PI / 2); // Rotate to align with Z axis
+  const zAxisMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+  const zAxis = new THREE.Mesh(zAxisGeometry, zAxisMaterial);
+  zAxis.position.set(0, 0, axisLength / 2);
+
+  // Add axes to the coordinate system
+  coordinateSystem.add(xAxis);
+  coordinateSystem.add(yAxis);
+  coordinateSystem.add(zAxis);
+
+  // Add cone tips to the axes for better direction indication
+  // X axis tip
+  const xTipGeometry = new THREE.ConeGeometry(maxDim * 0.05, maxDim * 0.15, 8);
+  xTipGeometry.rotateZ(-Math.PI / 2);
+  const xTipMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const xTip = new THREE.Mesh(xTipGeometry, xTipMaterial);
+  xTip.position.set(axisLength, 0, 0);
+
+  // Y axis tip
+  const yTipGeometry = new THREE.ConeGeometry(maxDim * 0.05, maxDim * 0.15, 8);
+  const yTipMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  const yTip = new THREE.Mesh(yTipGeometry, yTipMaterial);
+  yTip.position.set(0, axisLength, 0);
+
+  // Z axis tip
+  const zTipGeometry = new THREE.ConeGeometry(maxDim * 0.05, maxDim * 0.15, 8);
+  zTipGeometry.rotateX(Math.PI / 2);
+  const zTipMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+  const zTip = new THREE.Mesh(zTipGeometry, zTipMaterial);
+  zTip.position.set(0, 0, axisLength);
+
+  // Add tips to the coordinate system
+  coordinateSystem.add(xTip);
+  coordinateSystem.add(yTip);
+  coordinateSystem.add(zTip);
+
+  // Add numerical markers along each axis
+  const markerCount = 5; // Number of markers per axis
+  const markerStep = axisLength / markerCount;
+
+  // Create markers for X axis
+  for (let i = 1; i <= markerCount; i++) {
+    const position = i * markerStep;
+
+    // Create a sphere as a marker
+    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.04, 16, 16);
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+    marker.position.set(position, 0, 0);
+
+    coordinateSystem.add(marker);
+
+    // Add text label with the number
+    addTextLabel(
+      i.toString(),
+      new THREE.Vector3(position, -maxDim * 0.1, 0),
+      0xff0000
+    );
+  }
+
+  // Create markers for Y axis
+  for (let i = 1; i <= markerCount; i++) {
+    const position = i * markerStep;
+
+    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.04, 16, 16);
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+    marker.position.set(0, position, 0);
+
+    coordinateSystem.add(marker);
+
+    // Add text label with the number
+    addTextLabel(
+      i.toString(),
+      new THREE.Vector3(-maxDim * 0.1, position, 0),
+      0x00ff00
+    );
+  }
+
+  // Create markers for Z axis
+  for (let i = 1; i <= markerCount; i++) {
+    const position = i * markerStep;
+
+    const markerGeometry = new THREE.SphereGeometry(maxDim * 0.04, 16, 16);
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+    marker.position.set(0, 0, position);
+
+    coordinateSystem.add(marker);
+
+    // Add text label with the number
+    addTextLabel(
+      i.toString(),
+      new THREE.Vector3(0, -maxDim * 0.1, position),
+      0x0000ff
+    );
+  }
+
+  // Add axis labels
+  addTextLabel(
+    "X",
+    new THREE.Vector3(axisLength + maxDim * 0.2, 0, 0),
+    0xff0000,
+    true
+  );
+  addTextLabel(
+    "Y",
+    new THREE.Vector3(0, axisLength + maxDim * 0.2, 0),
+    0x00ff00,
+    true
+  );
+  addTextLabel(
+    "Z",
+    new THREE.Vector3(0, 0, axisLength + maxDim * 0.2),
+    0x0000ff,
+    true
+  );
+
+  // Add a toggle button for the coordinate system if it doesn't exist yet
+  if (!document.getElementById("coordToggleBtn")) {
+    addCoordinateSystemToggle();
+  }
+
+  // Force a render to show the coordinate system
+  forceRender();
+}
+
+// Function to create a text label
+function addTextLabel(text, position, color, isLarge = false) {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  canvas.width = 256; // Larger canvas for better text quality
+  canvas.height = 128;
+
+  // Set background to transparent
+  context.fillStyle = "rgba(0, 0, 0, 0)";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw text with a black outline for better visibility
+  context.font = isLarge ? "80px Arial" : "64px Arial"; // Larger font
+  context.strokeStyle = "black";
+  context.lineWidth = 4;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.strokeText(text, canvas.width / 2, canvas.height / 2);
+
+  // Fill with color
+  context.fillStyle = "#" + new THREE.Color(color).getHexString();
+  context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+  // Create texture from canvas
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+
+  // Create sprite material with the texture
+  const material = new THREE.SpriteMaterial({ map: texture });
+
+  // Create sprite and position it
+  const sprite = new THREE.Sprite(material);
+  sprite.position.copy(position);
+  sprite.scale.set(isLarge ? 1.0 : 0.7, isLarge ? 0.5 : 0.35, 1); // Larger scale
+
+  // Add to coordinate system
+  coordinateSystem.add(sprite);
+
+  return sprite;
+}
+
+// Add a toggle button for the coordinate system
+function addCoordinateSystemToggle() {
+  const button = document.createElement("button");
+  button.id = "coordToggleBtn";
+  button.textContent = "Toggle Coordinate System";
+  button.style.position = "absolute";
+  button.style.bottom = "60px"; // Position above the detail toggle button
+  button.style.right = "20px";
+  button.style.zIndex = "100";
+  button.style.padding = "10px";
+  button.style.backgroundColor = "#333";
+  button.style.color = "white";
+  button.style.border = "none";
+  button.style.borderRadius = "5px";
+  button.style.cursor = "pointer";
+
+  button.addEventListener("click", function () {
+    coordinateSystem.visible = !coordinateSystem.visible;
+    forceRender();
+  });
+
+  document.body.appendChild(button);
 }
 
 init();
