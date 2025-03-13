@@ -171,13 +171,17 @@ function init() {
       const scale = 20 / maxDim;
       object.scale.set(scale, scale, scale);
 
-      // Store original geometry for reference
+      // Store original geometry for each child
       object.traverse(function (child) {
         if (child.isMesh) {
-          originalGeometry = child.geometry.clone(); // Clone to ensure we have a clean copy
+          // Store original geometry in child's userData
+          child.userData.originalGeometry = child.geometry.clone();
 
-          // Create simplified geometry with fewer vertices
-          simplifyGeometry(child);
+          // Create and store simplified geometry
+          child.userData.simplifiedGeometry = simplifyGeometry(child);
+
+          // Use simplified geometry by default
+          child.geometry = child.userData.simplifiedGeometry;
         }
       });
 
@@ -257,30 +261,19 @@ function render() {
 // Function to simplify geometry
 function simplifyGeometry(mesh) {
   const geometry = mesh.geometry;
-
-  // Store the original geometry if not already stored
-  if (!originalGeometry) {
-    originalGeometry = geometry.clone();
-  }
-
-  // Create a simplified version by sampling vertices
   const positions = geometry.getAttribute("position").array;
   const normals = geometry.getAttribute("normal").array;
   const uvs = geometry.getAttribute("uv")
     ? geometry.getAttribute("uv").array
     : null;
 
-  // Reduce vertex count by sampling (keep every Nth vertex)
-  const reduction = 4; // Keep 1/4 of vertices
+  const reduction = 4;
   const newPositions = [];
   const newNormals = [];
   const newUvs = [];
 
-  // Process all triangles to maintain the complete model
   for (let i = 0; i < positions.length; i += 9) {
-    // Process every 'reduction'th triangle
     if (Math.floor(i / 9) % reduction === 0) {
-      // Add this triangle
       for (let j = 0; j < 9; j++) {
         if (i + j < positions.length) {
           newPositions.push(positions[i + j]);
@@ -299,8 +292,7 @@ function simplifyGeometry(mesh) {
     }
   }
 
-  // Create new geometry with reduced data
-  simplifiedGeometry = new THREE.BufferGeometry();
+  const simplifiedGeometry = new THREE.BufferGeometry();
   simplifiedGeometry.setAttribute(
     "position",
     new THREE.Float32BufferAttribute(newPositions, 3)
@@ -316,8 +308,7 @@ function simplifyGeometry(mesh) {
     );
   }
 
-  // Use simplified geometry by default
-  mesh.geometry = simplifiedGeometry;
+  return simplifiedGeometry;
 }
 
 // Function to simplify geometry with a specific reduction factor
@@ -400,11 +391,11 @@ function addDetailToggle() {
   button.addEventListener("click", function () {
     isHighDetail = !isHighDetail;
 
-    // Apply the appropriate geometry to all meshes
     object.traverse(function (child) {
       if (child.isMesh) {
-        // Make sure we're not changing visibility, just geometry
-        child.geometry = isHighDetail ? originalGeometry : simplifiedGeometry;
+        child.geometry = isHighDetail
+          ? child.userData.originalGeometry
+          : child.userData.simplifiedGeometry;
       }
     });
 
@@ -575,10 +566,8 @@ function addQualitySelector() {
 
     switch (quality) {
       case "low":
-        // Very low detail for maximum performance
         object.traverse(function (child) {
           if (child.isMesh) {
-            // Use simplified geometry with higher reduction
             const highReduction = simplifyGeometryWithFactor(child, 8);
             child.geometry = highReduction;
           }
@@ -587,20 +576,18 @@ function addQualitySelector() {
         break;
 
       case "medium":
-        // Default simplified geometry
         object.traverse(function (child) {
           if (child.isMesh) {
-            child.geometry = simplifiedGeometry;
+            child.geometry = child.userData.simplifiedGeometry;
           }
         });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         break;
 
       case "high":
-        // Original high detail
         object.traverse(function (child) {
           if (child.isMesh) {
-            child.geometry = originalGeometry;
+            child.geometry = child.userData.originalGeometry;
           }
         });
         renderer.setPixelRatio(window.devicePixelRatio);
