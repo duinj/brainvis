@@ -89,10 +89,25 @@ function init() {
   scene = new THREE.Scene();
   scene.matrixAutoUpdate = false; // Disable automatic matrix updates for static objects
 
-  const ambientLight = new THREE.AmbientLight(0x880808, 0.9);
+  // Improved lighting setup
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Softer ambient light
   scene.add(ambientLight);
 
-  const pointLight = new THREE.PointLight(0xffffff, 0.8);
+  // Add directional lights from multiple angles for better 3D effect
+  const frontLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  frontLight.position.set(0, 0, 1);
+  scene.add(frontLight);
+
+  const topLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  topLight.position.set(0, 1, 0);
+  scene.add(topLight);
+
+  const leftLight = new THREE.DirectionalLight(0xffffff, 0.4);
+  leftLight.position.set(-1, 0, 0);
+  scene.add(leftLight);
+
+  // Add a point light attached to the camera for dynamic lighting
+  const pointLight = new THREE.PointLight(0xffffff, 0.4);
   camera.add(pointLight);
   scene.add(camera);
 
@@ -113,7 +128,17 @@ function init() {
 
   function loadModel() {
     object.traverse(function (child) {
-      if (child.isMesh) child.material.map = texture;
+      if (child.isMesh) {
+        // Create a more sophisticated material with better lighting response
+        child.material = new THREE.MeshPhongMaterial({
+          color: 0xdddddd, // Light gray color
+          specular: 0x111111, // Slight specular highlight
+          shininess: 30, // Moderate shininess
+          transparent: true,
+          opacity: brainOpacity,
+          side: THREE.DoubleSide,
+        });
+      }
     });
 
     scene.add(object);
@@ -224,6 +249,9 @@ function init() {
 
   // Add transparency control
   addTransparencyControl();
+
+  // Add color picker
+  addColorPicker();
 
   // Add render triggers
   addRenderTriggers();
@@ -1404,6 +1432,74 @@ function addVoxelToggle() {
   });
 
   container.appendChild(button);
+}
+
+// Add a color picker for the brain
+function addColorPicker() {
+  const colorPickerDiv = document.createElement("div");
+  colorPickerDiv.id = "colorPickerControl";
+  colorPickerDiv.style.position = "absolute";
+  colorPickerDiv.style.bottom = "70px";
+  colorPickerDiv.style.left = "50%";
+  colorPickerDiv.style.transform = "translateX(-50%)"; // Center horizontally
+  colorPickerDiv.style.zIndex = "100";
+  colorPickerDiv.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+  colorPickerDiv.style.padding = "10px 15px";
+  colorPickerDiv.style.borderRadius = "4px";
+  colorPickerDiv.style.color = "white";
+  colorPickerDiv.style.fontFamily = "Arial, sans-serif";
+  colorPickerDiv.style.fontSize = "16px";
+  colorPickerDiv.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
+
+  colorPickerDiv.innerHTML = `
+    <div style="display: flex; align-items: center; flex-wrap: wrap;">
+      <label style="margin-right: 10px;">Brain Color: </label>
+      <input type="color" id="brainColorPicker" value="#dddddd" style="width: 50px; height: 30px; cursor: pointer; margin-right: 15px;">
+      <div style="display: flex; gap: 5px; margin-left: 5px;">
+        <button class="colorPreset" data-color="#dddddd" style="width: 25px; height: 25px; background-color: #dddddd; border: 1px solid #fff; border-radius: 3px; cursor: pointer;"></button>
+        <button class="colorPreset" data-color="#a9cce3" style="width: 25px; height: 25px; background-color: #a9cce3; border: 1px solid #fff; border-radius: 3px; cursor: pointer;"></button>
+        <button class="colorPreset" data-color="#f5cba7" style="width: 25px; height: 25px; background-color: #f5cba7; border: 1px solid #fff; border-radius: 3px; cursor: pointer;"></button>
+        <button class="colorPreset" data-color="#d2b4de" style="width: 25px; height: 25px; background-color: #d2b4de; border: 1px solid #fff; border-radius: 3px; cursor: pointer;"></button>
+        <button class="colorPreset" data-color="#abebc6" style="width: 25px; height: 25px; background-color: #abebc6; border: 1px solid #fff; border-radius: 3px; cursor: pointer;"></button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(colorPickerDiv);
+
+  // Add event listener for the color picker
+  document
+    .getElementById("brainColorPicker")
+    .addEventListener("input", function () {
+      const color = this.value;
+      updateBrainColor(color);
+    });
+
+  // Add event listeners for preset color buttons
+  document.querySelectorAll(".colorPreset").forEach((button) => {
+    button.addEventListener("click", function () {
+      const color = this.getAttribute("data-color");
+      document.getElementById("brainColorPicker").value = color;
+      updateBrainColor(color);
+    });
+  });
+}
+
+// Function to update the brain model's color
+function updateBrainColor(colorHex) {
+  // Convert hex string to THREE.Color
+  const color = new THREE.Color(colorHex);
+
+  // Update the material of all meshes in the brain model
+  object.traverse(function (child) {
+    if (child.isMesh) {
+      child.material.color = color;
+      child.material.needsUpdate = true;
+    }
+  });
+
+  // Force a render to show the changes
+  forceRender();
 }
 
 init();
