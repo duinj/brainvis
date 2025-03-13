@@ -10,6 +10,7 @@
 import * as THREE from "./three.module.js";
 import { OrbitControls } from "./OrbitControls.js";
 import { OBJLoader } from "./OBJLoader.js";
+import { VoxelSystem } from "./voxelSystem.js";
 
 var container;
 var camera, scene, renderer, controls;
@@ -22,6 +23,7 @@ let brainRegions = []; // Array to store brain region markers
 let brainRegionsGroup; // Group to hold brain region markers and labels
 let testPointsGroup; // Group to hold test point markers and labels
 let brainOpacity = 1.0; // Default opacity for the brain model
+let voxelSystem; // Reference to the voxel system
 
 // Performance stats
 let stats;
@@ -97,11 +99,12 @@ function init() {
   // Create coordinate system first
   coordinateSystem = new THREE.Group();
   scene.add(coordinateSystem);
-  coordinateSystem.visible = true; // Ensure it's visible
+  coordinateSystem.visible = false; // Hide coordinate system by default
 
   // Create brain regions group
   brainRegionsGroup = new THREE.Group();
   scene.add(brainRegionsGroup);
+  brainRegionsGroup.visible = false; // Hide brain regions by default
 
   // Create test points group
   testPointsGroup = new THREE.Group();
@@ -188,8 +191,11 @@ function init() {
       // Add detail toggle button
       addDetailToggle();
 
-      // Add half brain toggle button
-      addHalfBrainToggle();
+      // Initialize voxel system
+      voxelSystem = new VoxelSystem(scene, object, forceRender);
+
+      // Add voxel toggle button
+      addVoxelToggle();
     },
     onProgress,
     onError
@@ -216,20 +222,11 @@ function init() {
 
   window.addEventListener("resize", onWindowResize, false);
 
-  // Add FPS counter
-  addFpsCounter();
-
-  // Add quality selector
-  addQualitySelector();
+  // Add transparency control
+  addTransparencyControl();
 
   // Add render triggers
   addRenderTriggers();
-
-  // Add calibration controls
-  addCalibrationControls();
-
-  // Add transparency control
-  addTransparencyControl();
 }
 
 function onWindowResize() {
@@ -373,20 +370,21 @@ function simplifyGeometryWithFactor(mesh, factor) {
 function addDetailToggle() {
   const button = document.createElement("button");
   button.id = "detailToggleBtn";
-  button.textContent = "Toggle Detail";
+  button.textContent = "Low Detail";
   button.style.position = "absolute";
   button.style.bottom = "20px";
-  button.style.right = "20px";
+  button.style.left = "20px";
   button.style.zIndex = "100";
-  button.style.padding = "8px 12px";
-  button.style.backgroundColor = "#333";
+  button.style.padding = "10px 15px";
+  button.style.backgroundColor = "#4CAF50"; // Green color
   button.style.color = "white";
   button.style.border = "none";
   button.style.borderRadius = "4px";
   button.style.cursor = "pointer";
-  button.style.fontSize = "14px";
+  button.style.fontSize = "16px";
   button.style.fontFamily = "Arial, sans-serif";
-  button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
+  button.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
+  button.style.transition = "all 0.3s ease";
 
   button.addEventListener("click", function () {
     isHighDetail = !isHighDetail;
@@ -399,12 +397,22 @@ function addDetailToggle() {
       }
     });
 
-    button.textContent = isHighDetail
-      ? "Switch to Low Detail"
-      : "Switch to High Detail";
+    button.textContent = isHighDetail ? "Low Detail" : "High Detail";
+    button.style.backgroundColor = isHighDetail ? "#4CAF50" : "#FF9800"; // Green for high detail, orange for low detail
 
     // Force a render to show the changes
     forceRender();
+  });
+
+  // Add hover effect
+  button.addEventListener("mouseover", function () {
+    this.style.backgroundColor = isHighDetail ? "#3e8e41" : "#e68a00"; // Darker shade on hover
+    this.style.boxShadow = "0 6px 12px rgba(0,0,0,0.3)";
+  });
+
+  button.addEventListener("mouseout", function () {
+    this.style.backgroundColor = isHighDetail ? "#4CAF50" : "#FF9800"; // Return to original color
+    this.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
   });
 
   document.body.appendChild(button);
@@ -412,6 +420,11 @@ function addDetailToggle() {
 
 // Add button to toggle half brain view
 function addHalfBrainToggle() {
+  // Don't add the button to keep the UI clean
+  return;
+
+  // Original code commented out
+  /*
   const button = document.createElement("button");
   button.id = "halfBrainToggleBtn";
   button.textContent = "Show Half Brain";
@@ -477,10 +490,16 @@ function addHalfBrainToggle() {
   });
 
   document.body.appendChild(button);
+  */
 }
 
 // Add FPS counter
 function addFpsCounter() {
+  // Don't add the FPS counter to keep the UI clean
+  return;
+
+  // Original code commented out
+  /*
   const fpsDiv = document.createElement("div");
   fpsDiv.style.position = "absolute";
   fpsDiv.style.top = "10px";
@@ -515,10 +534,16 @@ function addFpsCounter() {
   }
 
   updateFps();
+  */
 }
 
 // Add quality selector
 function addQualitySelector() {
+  // Don't add the quality selector to keep the UI clean
+  return;
+
+  // Original code commented out
+  /*
   const selector = document.createElement("select");
   selector.id = "qualitySelector";
   selector.style.position = "absolute";
@@ -604,6 +629,7 @@ function addQualitySelector() {
   });
 
   document.body.appendChild(selector);
+  */
 }
 
 // Force render on any user interaction
@@ -850,6 +876,11 @@ function addTextLabel(text, position, color, isLarge = false) {
 
 // Add a toggle button for the coordinate system
 function addCoordinateSystemToggle() {
+  // Don't add the button to keep the UI clean
+  return;
+
+  // Original code commented out
+  /*
   const button = document.createElement("button");
   button.id = "coordToggleBtn";
   button.textContent = "Toggle Axes";
@@ -874,6 +905,7 @@ function addCoordinateSystemToggle() {
   });
 
   document.body.appendChild(button);
+  */
 }
 
 // Function to add brain regions based on MNI coordinates
@@ -995,6 +1027,11 @@ function addRegionLabel(text, position, maxDim) {
 
 // Add a toggle button for brain regions
 function addBrainRegionsToggle() {
+  // Don't add the button to keep the UI clean
+  return;
+
+  // Original code commented out
+  /*
   const button = document.createElement("button");
   button.id = "regionsToggleBtn";
   button.textContent = "Toggle Regions";
@@ -1021,10 +1058,16 @@ function addBrainRegionsToggle() {
   });
 
   document.body.appendChild(button);
+  */
 }
 
 // Add a calibration tool to adjust MNI to model coordinate mapping
 function addCalibrationControls() {
+  // Don't add the calibration controls to keep the UI clean
+  return;
+
+  // Original code commented out
+  /*
   const controlsDiv = document.createElement("div");
   controlsDiv.id = "calibrationControls";
   controlsDiv.style.position = "absolute";
@@ -1123,6 +1166,7 @@ function addCalibrationControls() {
       // Update brain regions with new calibration
       addBrainRegions();
     });
+  */
 }
 
 // Function to add test points based on MNI coordinates
@@ -1218,6 +1262,11 @@ function addTestPointLabel(text, position, maxDim) {
 
 // Add a toggle button for test points
 function addTestPointsToggle() {
+  // Don't add the button to keep the UI clean
+  return;
+
+  // Original code commented out
+  /*
   const button = document.createElement("button");
   button.id = "testPointsToggleBtn";
   button.textContent = "Show Test Points";
@@ -1244,6 +1293,7 @@ function addTestPointsToggle() {
   });
 
   document.body.appendChild(button);
+  */
 }
 
 // Function to update the brain model's opacity
@@ -1269,21 +1319,23 @@ function addTransparencyControl() {
   const controlDiv = document.createElement("div");
   controlDiv.id = "transparencyControl";
   controlDiv.style.position = "absolute";
-  controlDiv.style.bottom = "60px";
-  controlDiv.style.left = "10px";
+  controlDiv.style.bottom = "20px";
+  controlDiv.style.left = "50%";
+  controlDiv.style.transform = "translateX(-50%)"; // Center horizontally
   controlDiv.style.zIndex = "100";
   controlDiv.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
-  controlDiv.style.padding = "10px";
+  controlDiv.style.padding = "10px 15px";
   controlDiv.style.borderRadius = "4px";
   controlDiv.style.color = "white";
   controlDiv.style.fontFamily = "Arial, sans-serif";
-  controlDiv.style.fontSize = "14px";
+  controlDiv.style.fontSize = "16px";
+  controlDiv.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
 
   controlDiv.innerHTML = `
     <div style="display: flex; align-items: center;">
       <label style="margin-right: 10px;">Brain Opacity: </label>
       <input type="range" id="opacitySlider" min="0" max="1" step="0.05" value="1" style="width: 150px;">
-      <span id="opacityValue" style="margin-left: 10px;">1.00</span>
+      <span id="opacityValue" style="margin-left: 10px; min-width: 40px; text-align: right;">1.00</span>
     </div>
   `;
 
@@ -1297,6 +1349,61 @@ function addTransparencyControl() {
       document.getElementById("opacityValue").textContent = opacity.toFixed(2);
       updateBrainOpacity(opacity);
     });
+}
+
+// Add a toggle button for voxel test region
+function addVoxelToggle() {
+  const button = document.createElement("button");
+  button.id = "voxelToggleBtn";
+  button.textContent = "Show Brain Activity";
+  button.style.position = "absolute";
+  button.style.bottom = "20px";
+  button.style.right = "20px";
+  button.style.zIndex = "100";
+  button.style.padding = "10px 15px";
+  button.style.backgroundColor = "#2196F3"; // Blue color
+  button.style.color = "white";
+  button.style.border = "none";
+  button.style.borderRadius = "4px";
+  button.style.cursor = "pointer";
+  button.style.fontSize = "16px";
+  button.style.fontFamily = "Arial, sans-serif";
+  button.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
+  button.style.transition = "all 0.3s ease";
+
+  let voxelsVisible = false;
+
+  button.addEventListener("click", function () {
+    voxelsVisible = !voxelsVisible;
+
+    if (voxelsVisible) {
+      // Fill test region with voxels
+      voxelSystem.fillTestRegion();
+      button.style.backgroundColor = "#f44336"; // Red color
+      button.textContent = "Hide Brain Activity";
+    } else {
+      // Clear all voxels
+      voxelSystem.clearAllVoxels();
+      button.style.backgroundColor = "#2196F3"; // Blue color
+      button.textContent = "Show Brain Activity";
+    }
+
+    // Force a render
+    forceRender();
+  });
+
+  // Add hover effect
+  button.addEventListener("mouseover", function () {
+    this.style.backgroundColor = voxelsVisible ? "#d32f2f" : "#0b7dda"; // Darker shade on hover
+    this.style.boxShadow = "0 6px 12px rgba(0,0,0,0.3)";
+  });
+
+  button.addEventListener("mouseout", function () {
+    this.style.backgroundColor = voxelsVisible ? "#f44336" : "#2196F3"; // Return to original color
+    this.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
+  });
+
+  container.appendChild(button);
 }
 
 init();
