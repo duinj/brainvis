@@ -356,7 +356,7 @@
         const infoDiv = document.getElementById("info");
         const orientationInfo = document.createElement("p");
         orientationInfo.innerHTML =
-          "Orientation: <span style='color:#ff0000'>X (R→L)</span>, <span style='color:#00ff00'>Y (A→P)</span>, <span style='color:#0000ff'>Z (S→I)</span>";
+          "Orientation: <span style='color:#444444'>X (R→L)</span>, <span style='color:#666666'>Y (A→P)</span>, <span style='color:#888888'>Z (S→I)</span>";
         infoDiv.appendChild(orientationInfo);
 
         // Show rotation toggle button after brain is loaded
@@ -373,11 +373,11 @@
         const boxSize = 0.92; // Slightly smaller to create visible gaps
         const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
 
-        // Create a material that better shows the brain's contours
+        // Create a material that better shows the brain's contours with grayscale theme
         const material = new THREE.MeshPhongMaterial({
-          color: 0x88ccff,
-          specular: 0x111111,
-          shininess: 10,
+          color: 0x888888,
+          specular: 0x222222,
+          shininess: 15,
           transparent: false,
           side: THREE.FrontSide,
           flatShading: true,
@@ -404,13 +404,11 @@
 
           instancedMesh.setMatrixAt(i, matrix);
 
-          // Set color based on height with more contrast
+          // Set color based on height with grayscale tones
           const heightRatio = y / shape[1];
-          const color = new THREE.Color(
-            0.3 + 0.7 * heightRatio, // R
-            0.4 + 0.3 * heightRatio, // G - less green variation for better contrast
-            0.9 - 0.6 * heightRatio // B - more blue variation for better contrast
-          );
+          // Create grayscale value that varies from darker (0.3) to lighter (0.8)
+          const grayValue = 0.3 + 0.5 * heightRatio;
+          const color = new THREE.Color(grayValue, grayValue, grayValue);
           instancedMesh.setColorAt(i, color);
         }
 
