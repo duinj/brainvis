@@ -37,6 +37,22 @@
         border-radius: 10px;
         z-index: 100;
       }
+      #rotation-toggle {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        padding: 10px 15px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      #rotation-toggle:hover {
+        background-color: rgba(240, 240, 240, 0.9);
+      }
     </style>
   </head>
   <body>
@@ -50,11 +66,15 @@
       </p>
     </div>
     <div id="loading">Loading brain voxels...</div>
+    <button id="rotation-toggle">Stop Rotation</button>
 
     <script>
       // Main Three.js variables
       let scene, camera, renderer, controls;
       let voxelCount = 0;
+      let brainGroup; // Store reference to the brain group for rotation
+      let autoRotate = true; // Auto-rotation state
+      let userInteracted = false; // Track if user has interacted with controls
 
       // Initialize the scene
       function init() {
@@ -86,6 +106,12 @@
         controls.maxPolarAngle = Math.PI; // Allow full vertical rotation
         controls.rotateSpeed = 0.7; // Adjust rotation speed
 
+        // Add event listeners to detect user interaction with controls
+        controls.addEventListener("start", function () {
+          userInteracted = true;
+          updateRotationButton();
+        });
+
         // Enhanced lighting setup for better gyri visibility
         // Base ambient light for overall visibility
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -109,8 +135,30 @@
         // Handle window resize
         window.addEventListener("resize", onWindowResize, false);
 
+        // Set up rotation toggle button
+        setupRotationToggle();
+
         // Load and visualize voxels
         loadVoxels();
+      }
+
+      // Set up rotation toggle button
+      function setupRotationToggle() {
+        const toggleButton = document.getElementById("rotation-toggle");
+        toggleButton.addEventListener("click", function () {
+          autoRotate = !autoRotate;
+          updateRotationButton();
+        });
+      }
+
+      // Update rotation button text based on current state
+      function updateRotationButton() {
+        const toggleButton = document.getElementById("rotation-toggle");
+        if (autoRotate) {
+          toggleButton.textContent = "Stop Rotation";
+        } else {
+          toggleButton.textContent = "Start Rotation";
+        }
       }
 
       // Handle window resize
@@ -123,6 +171,15 @@
       // Animation loop
       function animate() {
         requestAnimationFrame(animate);
+
+        // Apply auto-rotation if enabled and user hasn't interacted
+        if (autoRotate && !userInteracted && brainGroup) {
+          // Rotate around the vertical axis (y-axis) for horizontal side-to-side spin
+          // Note: Since we've rotated the brain group with brainGroup.rotation.x = -Math.PI / 2,
+          // we need to rotate around the z-axis to get a horizontal spin
+          brainGroup.rotation.z += 0.001; // Very slow horizontal rotation
+        }
+
         controls.update();
         renderer.render(scene, camera);
       }
@@ -258,7 +315,7 @@
       // Create brain volume visualization
       function createBrainVolume(voxels, shape) {
         // Create a group to hold all elements
-        const brainGroup = new THREE.Group();
+        brainGroup = new THREE.Group(); // Store reference for rotation
 
         // Calculate center offset to center the brain
         const centerOffset = [-shape[0] / 2, -shape[1] / 2, -shape[2] / 2];
@@ -273,9 +330,16 @@
         // Add the brain group to the scene
         scene.add(brainGroup);
 
-        // Set up camera position for a good initial view
+        // Set up camera position for a good top-front-side view of the brain
         const maxDim = Math.max(...shape);
-        camera.position.set(0, maxDim * 1.5, maxDim * 1.5);
+
+        // Position camera for a more zoomed-in top-front-side view
+        // X: positive (right side of brain)
+        // Y: positive (above brain)
+        // Z: negative (in front of brain)
+        camera.position.set(maxDim * 0.8, maxDim * 0.7, -maxDim * 0.6);
+
+        // Look at the center of the brain
         camera.lookAt(0, 0, 0);
         controls.update();
 
@@ -288,6 +352,9 @@
         orientationInfo.innerHTML =
           "Orientation: <span style='color:#ff0000'>X (R→L)</span>, <span style='color:#00ff00'>Y (A→P)</span>, <span style='color:#0000ff'>Z (S→I)</span>";
         infoDiv.appendChild(orientationInfo);
+
+        // Show rotation toggle button after brain is loaded
+        document.getElementById("rotation-toggle").style.display = "block";
       }
 
       // Create voxels for the brain surface
