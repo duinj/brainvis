@@ -24,6 +24,7 @@ let brainRegionsGroup; // Group to hold brain region markers and labels
 let testPointsGroup; // Group to hold test point markers and labels
 let brainOpacity = 1.0; // Default opacity for the brain model
 let voxelSystem; // Reference to the voxel system
+let dlpfcVoxels = null; // Store the DLPFC voxels data
 
 // Performance stats
 let stats;
@@ -157,6 +158,15 @@ function init() {
 
     // Now that the model is loaded, update the coordinate system
     updateCoordinateSystem();
+
+    // Initialize voxel system
+    voxelSystem = new VoxelSystem(scene, object, forceRender);
+
+    // Load DLPFC voxels
+    loadDLPFCVoxels();
+
+    // Add voxel toggle button
+    addVoxelToggle();
   }
 
   const manager = new THREE.LoadingManager(loadModel);
@@ -215,9 +225,6 @@ function init() {
 
       // Add detail toggle button
       addDetailToggle();
-
-      // Initialize voxel system
-      voxelSystem = new VoxelSystem(scene, object, forceRender);
 
       // Add voxel toggle button
       addVoxelToggle();
@@ -1383,7 +1390,7 @@ function addTransparencyControl() {
 function addVoxelToggle() {
   const button = document.createElement("button");
   button.id = "voxelToggleBtn";
-  button.textContent = "Show Brain Activity";
+  button.textContent = "Show DLPFC Region";
   button.style.position = "absolute";
   button.style.bottom = "20px";
   button.style.right = "20px";
@@ -1405,15 +1412,23 @@ function addVoxelToggle() {
     voxelsVisible = !voxelsVisible;
 
     if (voxelsVisible) {
-      // Fill test region with voxels
-      voxelSystem.fillTestRegion();
-      button.style.backgroundColor = "#f44336"; // Red color
-      button.textContent = "Hide Brain Activity";
+      if (dlpfcVoxels) {
+        // Display DLPFC voxels
+        displayDLPFCVoxels();
+        button.style.backgroundColor = "#f44336"; // Red color
+        button.textContent = "Hide DLPFC Region";
+      } else {
+        console.error("DLPFC voxels data not loaded yet");
+        // Fallback to test region if DLPFC data not available
+        voxelSystem.fillTestRegion();
+        button.style.backgroundColor = "#f44336"; // Red color
+        button.textContent = "Hide Brain Activity";
+      }
     } else {
       // Clear all voxels
       voxelSystem.clearAllVoxels();
       button.style.backgroundColor = "#2196F3"; // Blue color
-      button.textContent = "Show Brain Activity";
+      button.textContent = "Show DLPFC Region";
     }
 
     // Force a render
@@ -1431,7 +1446,329 @@ function addVoxelToggle() {
     this.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
   });
 
-  container.appendChild(button);
+  document.body.appendChild(button);
+}
+
+// Function to display DLPFC voxels
+function displayDLPFCVoxels() {
+  if (!dlpfcVoxels || !dlpfcVoxels.coordinates) {
+    console.error("DLPFC MNI coordinates not available");
+    return;
+  }
+
+  // Clear any existing voxels
+  voxelSystem.clearAllVoxels();
+
+  console.log(`Total DLPFC MNI coordinates: ${dlpfcVoxels.coordinates.length}`);
+  console.log(`Description: ${dlpfcVoxels.description}`);
+  console.log(`Space: ${dlpfcVoxels.space}`);
+  console.log(
+    `Voxel grid size: ${voxelSystem.gridSizeX} x ${voxelSystem.gridSizeY} x ${voxelSystem.gridSizeZ}`
+  );
+
+  // Create a custom material for DLPFC voxels
+  const dlpfcMaterial = new THREE.MeshLambertMaterial({
+    color: 0x4287f5, // Blue color
+    transparent: true,
+    opacity: 0.7,
+  });
+
+  // Get the brain model's bounding box to scale appropriately
+  const box = new THREE.Box3().setFromObject(object);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+
+  // Calculate the center of the brain model's voxel grid
+  const centerX = Math.floor(voxelSystem.gridSizeX / 2);
+  const centerY = Math.floor(voxelSystem.gridSizeY / 2);
+  const centerZ = Math.floor(voxelSystem.gridSizeZ / 2);
+
+  console.log(`Grid center: ${centerX}, ${centerY}, ${centerZ}`);
+  console.log(`Brain size: ${size.x}, ${size.y}, ${size.z}`);
+  console.log(`Max dimension: ${maxDim}`);
+
+  // Define different transformation approaches to map MNI coordinates to voxel grid
+  const transformations = [
+    // Approach 1: Standard MNI mapping with adjusted offsets for DLPFC
+    {
+      name: "Standard MNI with DLPFC offsets",
+      transform: (mniX, mniY, mniZ) => {
+        const scaleFactor = maxDim / 200;
+        // Adjust offsets to move DLPFC more frontal and lateral
+        const offsetX = 0; // No additional X offset
+        const offsetY = 0.2 * maxDim; // Move forward (anterior)
+        const offsetZ = 0.1 * maxDim; // Move up slightly
+
+        return {
+          x: mniX * scaleFactor + centerX,
+          y: mniZ * scaleFactor + centerY + offsetY, // Map MNI Z to model Y (vertical)
+          z: -mniY * scaleFactor + centerZ + offsetZ, // Map MNI Y to model Z (with negation)
+        };
+      },
+    },
+
+    // Approach 2: Rotated mapping to better align with brain orientation
+    {
+      name: "Rotated mapping",
+      transform: (mniX, mniY, mniZ) => {
+        const scaleFactor = maxDim / 200;
+        // Rotate coordinates to better align with brain orientation
+        return {
+          x: mniX * scaleFactor + centerX,
+          y: (mniZ * 0.7 - mniY * 0.3) * scaleFactor + centerY, // Rotate to move DLPFC more anterior
+          z: (-mniY * 0.7 - mniZ * 0.3) * scaleFactor + centerZ, // Rotate to move DLPFC more superior
+        };
+      },
+    },
+
+    // Approach 3: Scaled mapping with emphasis on frontal and lateral positioning
+    {
+      name: "Frontal-lateral emphasis",
+      transform: (mniX, mniY, mniZ) => {
+        const scaleFactor = maxDim / 180; // Slightly larger scale
+        // Emphasize lateral (X) and anterior (Y) positioning
+        return {
+          x: mniX * 1.2 * scaleFactor + centerX, // Emphasize lateral positioning
+          y: mniZ * 0.8 * scaleFactor + centerY + 0.25 * maxDim, // Move forward
+          z: -mniY * 0.8 * scaleFactor + centerZ, // Standard vertical mapping
+        };
+      },
+    },
+
+    // Approach 4: Direct anatomical positioning based on brain dimensions
+    {
+      name: "Direct anatomical positioning",
+      transform: (mniX, mniY, mniZ) => {
+        // For left DLPFC (negative X values)
+        if (mniX < 0) {
+          return {
+            x: centerX - 0.35 * voxelSystem.gridSizeX, // Left lateral position
+            y: centerY + 0.3 * voxelSystem.gridSizeY, // Anterior position
+            z: centerZ + 0.2 * voxelSystem.gridSizeZ, // Superior position
+          };
+        }
+        // For right DLPFC (positive X values)
+        else {
+          return {
+            x: centerX + 0.35 * voxelSystem.gridSizeX, // Right lateral position
+            y: centerY + 0.3 * voxelSystem.gridSizeY, // Anterior position
+            z: centerZ + 0.2 * voxelSystem.gridSizeZ, // Superior position
+          };
+        }
+      },
+    },
+
+    // Approach 5: Adjusted MNI mapping with non-linear transformation
+    {
+      name: "Non-linear transformation",
+      transform: (mniX, mniY, mniZ) => {
+        const scaleFactor = maxDim / 200;
+        // Apply non-linear transformation to better match brain anatomy
+        const signX = Math.sign(mniX);
+        const absX = Math.abs(mniX);
+
+        // Enhance lateral positioning for more extreme X values
+        const adjustedX = signX * (absX + Math.pow(absX / 50, 2) * 20);
+
+        // Move anterior coordinates more forward
+        const adjustedY = mniY + Math.pow(Math.max(0, mniY) / 50, 2) * 30;
+
+        return {
+          x: adjustedX * scaleFactor + centerX,
+          y: mniZ * scaleFactor + centerY + 0.2 * maxDim,
+          z: -adjustedY * scaleFactor + centerZ,
+        };
+      },
+    },
+
+    // Approach 6: Anatomical positioning with MNI-based variation
+    {
+      name: "Anatomical positioning with variation",
+      transform: (mniX, mniY, mniZ) => {
+        const scaleFactor = maxDim / 250; // Smaller scale factor
+        const baseX = centerX + (mniX < 0 ? -0.3 : 0.3) * voxelSystem.gridSizeX;
+        const baseY = centerY + 0.3 * voxelSystem.gridSizeY;
+        const baseZ = centerZ + 0.2 * voxelSystem.gridSizeZ;
+
+        // Add variation based on MNI coordinates
+        return {
+          x: baseX + mniX * 0.1 * scaleFactor, // Small variation in X
+          y: baseY + mniZ * 0.1 * scaleFactor, // Small variation in Y
+          z: baseZ + -mniY * 0.1 * scaleFactor, // Small variation in Z
+        };
+      },
+    },
+  ];
+
+  // Test each transformation approach
+  const results = [];
+
+  transformations.forEach((approach, index) => {
+    const voxelKeys = [];
+    let mappedCount = 0;
+
+    // Process each MNI coordinate
+    dlpfcVoxels.coordinates.forEach((coord) => {
+      const [mniX, mniY, mniZ] = coord;
+
+      // Apply the transformation
+      const transformed = approach.transform(mniX, mniY, mniZ);
+
+      // Convert to grid indices
+      const gridX = Math.round(transformed.x);
+      const gridY = Math.round(transformed.y);
+      const gridZ = Math.round(transformed.z);
+
+      // Create the voxel key
+      const key = `${gridX},${gridY},${gridZ}`;
+      voxelKeys.push(key);
+
+      // Check if this key exists in the voxel system
+      if (voxelSystem.voxelGrid[key]) {
+        mappedCount++;
+      }
+    });
+
+    results.push({
+      index,
+      name: approach.name,
+      keys: voxelKeys,
+      mappedCount,
+    });
+
+    console.log(
+      `Approach ${index + 1} (${approach.name}): ${mappedCount} voxels mapped`
+    );
+  });
+
+  // Find the approach with the most mapped voxels
+  let bestApproach = results[0];
+
+  results.forEach((result) => {
+    if (result.mappedCount > bestApproach.mappedCount) {
+      bestApproach = result;
+    }
+  });
+
+  console.log(
+    `Using approach ${bestApproach.index + 1} (${bestApproach.name}) with ${
+      bestApproach.mappedCount
+    } mapped voxels`
+  );
+
+  // If no approach mapped enough voxels, create anatomically correct regions
+  if (bestApproach.mappedCount < 10) {
+    console.log(
+      "Not enough voxels mapped. Creating anatomically correct DLPFC regions."
+    );
+
+    // Create voxels directly in the brain model at the DLPFC location
+    const directKeys = [];
+
+    // Left DLPFC region - more frontal and lateral
+    const leftDLPFC = {
+      minX: centerX - Math.floor(voxelSystem.gridSizeX * 0.45), // More lateral
+      maxX: centerX - Math.floor(voxelSystem.gridSizeX * 0.25),
+      minY: centerY + Math.floor(voxelSystem.gridSizeY * 0.2), // More anterior
+      maxY: centerY + Math.floor(voxelSystem.gridSizeY * 0.4),
+      minZ: centerZ + Math.floor(voxelSystem.gridSizeZ * 0.1), // Slightly superior
+      maxZ: centerZ + Math.floor(voxelSystem.gridSizeZ * 0.3),
+    };
+
+    // Right DLPFC region - more frontal and lateral
+    const rightDLPFC = {
+      minX: centerX + Math.floor(voxelSystem.gridSizeX * 0.25), // More lateral
+      maxX: centerX + Math.floor(voxelSystem.gridSizeX * 0.45),
+      minY: centerY + Math.floor(voxelSystem.gridSizeY * 0.2), // More anterior
+      maxY: centerY + Math.floor(voxelSystem.gridSizeY * 0.4),
+      minZ: centerZ + Math.floor(voxelSystem.gridSizeZ * 0.1), // Slightly superior
+      maxZ: centerZ + Math.floor(voxelSystem.gridSizeZ * 0.3),
+    };
+
+    // Function to create a spherical region of voxels
+    function createSphericalRegion(region) {
+      const centerX = (region.minX + region.maxX) / 2;
+      const centerY = (region.minY + region.maxY) / 2;
+      const centerZ = (region.minZ + region.maxZ) / 2;
+
+      const radiusX = (region.maxX - region.minX) / 2;
+      const radiusY = (region.maxY - region.minY) / 2;
+      const radiusZ = (region.maxZ - region.minZ) / 2;
+
+      for (let x = region.minX; x <= region.maxX; x++) {
+        for (let y = region.minY; y <= region.maxY; y++) {
+          for (let z = region.minZ; z <= region.maxZ; z++) {
+            // Calculate distance from center (normalized by radii to create an ellipsoid)
+            const dx = (x - centerX) / radiusX;
+            const dy = (y - centerY) / radiusY;
+            const dz = (z - centerZ) / radiusZ;
+
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            // If within the ellipsoid
+            if (distance <= 1.0) {
+              const key = `${x},${y},${z}`;
+              directKeys.push(key);
+            }
+          }
+        }
+      }
+    }
+
+    // Create both DLPFC regions
+    createSphericalRegion(leftDLPFC);
+    createSphericalRegion(rightDLPFC);
+
+    console.log(
+      `Created ${directKeys.length} voxel keys for anatomical DLPFC regions`
+    );
+
+    // Use these keys instead
+    bestApproach = {
+      index: -1,
+      name: "Anatomical DLPFC regions",
+      keys: directKeys,
+      mappedCount: 0, // Will be updated during processing
+    };
+  }
+
+  // Now activate the voxels in batches
+  const batchSize = 100;
+  let currentIndex = 0;
+  let mappedVoxelCount = 0;
+
+  function processBatch() {
+    const endIndex = Math.min(
+      currentIndex + batchSize,
+      bestApproach.keys.length
+    );
+
+    for (let i = currentIndex; i < endIndex; i++) {
+      const key = bestApproach.keys[i];
+
+      // Check if the key exists in the voxel system's grid
+      if (voxelSystem.voxelGrid[key]) {
+        voxelSystem.activateVoxel(key, dlpfcMaterial);
+        mappedVoxelCount++;
+      }
+    }
+
+    currentIndex = endIndex;
+
+    // If there are more voxels to process, schedule the next batch
+    if (currentIndex < bestApproach.keys.length) {
+      setTimeout(processBatch, 0);
+    } else {
+      console.log(
+        `Displayed ${mappedVoxelCount} of ${bestApproach.keys.length} DLPFC voxels using approach "${bestApproach.name}"`
+      );
+      forceRender();
+    }
+  }
+
+  // Start processing the first batch
+  processBatch();
 }
 
 // Add a color picker for the brain
@@ -1500,6 +1837,24 @@ function updateBrainColor(colorHex) {
 
   // Force a render to show the changes
   forceRender();
+}
+
+// Function to load DLPFC voxels from JSON file
+function loadDLPFCVoxels() {
+  fetch("../experiment/dlpfc_mni_coordinates.json")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log("DLPFC MNI coordinates loaded:", data);
+      dlpfcVoxels = data;
+    })
+    .catch((error) => {
+      console.error("Error loading DLPFC MNI coordinates:", error);
+    });
 }
 
 init();

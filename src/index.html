@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Brain Voxel Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: white;
+      }
+      #info {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: #333;
+        font-family: Arial, sans-serif;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+        max-width: 300px;
+      }
+      #loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+        color: #333;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 20px;
+        border-radius: 10px;
+        z-index: 100;
+      }
+      #rotation-toggle {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        padding: 10px 15px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      #rotation-toggle:hover {
+        background-color: rgba(240, 240, 240, 0.9);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">
+      <h2>3D Brain Voxel Visualization</h2>
+      <p>Loading voxels: <span id="voxel-count">0</span></p>
+      <p>Brain dimensions: <span id="dimensions">Loading...</span></p>
+      <p>
+        Controls: Left-click + drag to rotate, scroll to zoom, right-click +
+        drag to pan
+      </p>
+    </div>
+    <div id="loading">Loading brain voxels...</div>
+    <button id="rotation-toggle">Stop Rotation</button>
+
+    <script>
+      // Main Three.js variables
+      let scene, camera, renderer, controls;
+      let voxelCount = 0;
+      let brainGroup; // Store reference to the brain group for rotation
+      let autoRotate = true; // Auto-rotation state
+      let userInteracted = false; // Track if user has interacted with controls
+
+      // Initialize the scene
+      function init() {
+        // Create scene
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff);
+
+        // Create camera
+        camera = new THREE.PerspectiveCamera(
+          60,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          2000
+        );
+        camera.position.set(100, 100, 100);
+
+        // Create renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Add orbit controls for interaction
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.25;
+        controls.screenSpacePanning = true; // Enable proper panning
+        controls.minDistance = 10;
+        controls.maxDistance = 500;
+        controls.maxPolarAngle = Math.PI; // Allow full vertical rotation
+        controls.rotateSpeed = 0.7; // Adjust rotation speed
+
+        // Add event listeners to detect user interaction with controls
+        controls.addEventListener("start", function () {
+          if (autoRotate) {
+            userInteracted = true;
+            autoRotate = false;
+            updateRotationButton();
+          }
+        });
+
+        // Enhanced lighting setup for better gyri visibility
+        // Base ambient light for overall visibility
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        // Main directional light from top-right
+        const mainLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        mainLight.position.set(1, 1, 1);
+        scene.add(mainLight);
+
+        // Secondary directional light from bottom-left (fill light)
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        fillLight.position.set(-1, -0.5, -1);
+        scene.add(fillLight);
+
+        // Rim light from behind to highlight edges
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        rimLight.position.set(0, 0, -1);
+        scene.add(rimLight);
+
+        // Handle window resize
+        window.addEventListener("resize", onWindowResize, false);
+
+        // Set up rotation toggle button
+        setupRotationToggle();
+
+        // Load and visualize voxels
+        loadVoxels();
+      }
+
+      // Set up rotation toggle button
+      function setupRotationToggle() {
+        const toggleButton = document.getElementById("rotation-toggle");
+        toggleButton.addEventListener("click", function () {
+          autoRotate = !autoRotate;
+          if (autoRotate) {
+            userInteracted = false; // Reset interaction flag when manually starting rotation
+          }
+          updateRotationButton();
+        });
+      }
+
+      // Update rotation button text based on current state
+      function updateRotationButton() {
+        const toggleButton = document.getElementById("rotation-toggle");
+        if (autoRotate) {
+          toggleButton.textContent = "Stop Rotation";
+        } else {
+          toggleButton.textContent = "Start Rotation";
+        }
+      }
+
+      // Handle window resize
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+
+        // Apply auto-rotation if enabled and user hasn't interacted
+        if (autoRotate && brainGroup) {
+          // Rotate around the vertical axis (y-axis) for horizontal side-to-side spin
+          // Note: Since we've rotated the brain group with brainGroup.rotation.x = -Math.PI / 2,
+          // we need to rotate around the z-axis to get a horizontal spin
+          brainGroup.rotation.z += 0.001; // Very slow horizontal rotation
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      // Load voxels from JSON file
+      function loadVoxels() {
+        fetch("whole_brain_atlas_voxels.json")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            const voxels = data.voxels;
+            const shape = data.shape;
+
+            // Update info panel
+            document.getElementById(
+              "dimensions"
+            ).textContent = `${shape[0]} × ${shape[1]} × ${shape[2]}`;
+
+            // Filter to get only surface voxels
+            const surfaceVoxels = filterSurfaceVoxels(voxels, shape);
+
+            // Create brain volume visualization with only surface voxels
+            createBrainVolume(surfaceVoxels, shape);
+
+            // Hide loading message
+            document.getElementById("loading").style.display = "none";
+          })
+          .catch((error) => {
+            console.error("Error loading voxel data:", error);
+            document.getElementById("loading").textContent =
+              "Error loading voxel data. Check console for details.";
+          });
+      }
+
+      // Filter to get only surface voxels
+      function filterSurfaceVoxels(voxels, shape) {
+        console.log("Filtering surface voxels...");
+
+        // Create a 3D array to represent the brain volume
+        const volume = Array(shape[0])
+          .fill()
+          .map(() =>
+            Array(shape[1])
+              .fill()
+              .map(() => Array(shape[2]).fill(false))
+          );
+
+        // Fill the volume with the voxels
+        for (const voxel of voxels) {
+          const [x, y, z] = voxel;
+          if (
+            x >= 0 &&
+            x < shape[0] &&
+            y >= 0 &&
+            y < shape[1] &&
+            z >= 0 &&
+            z < shape[2]
+          ) {
+            volume[x][y][z] = true;
+          }
+        }
+
+        // Find surface voxels (those with at least one empty neighbor)
+        const surfaceVoxels = [];
+        const directions = [
+          [1, 0, 0],
+          [-1, 0, 0],
+          [0, 1, 0],
+          [0, -1, 0],
+          [0, 0, 1],
+          [0, 0, -1],
+        ];
+
+        for (const voxel of voxels) {
+          const [x, y, z] = voxel;
+
+          // Check if this voxel is on the surface
+          let isSurface = false;
+
+          // If it's on the edge of the volume, it's definitely a surface voxel
+          if (
+            x === 0 ||
+            x === shape[0] - 1 ||
+            y === 0 ||
+            y === shape[1] - 1 ||
+            z === 0 ||
+            z === shape[2] - 1
+          ) {
+            isSurface = true;
+          } else {
+            // Check all 6 neighbors
+            for (const [dx, dy, dz] of directions) {
+              const nx = x + dx;
+              const ny = y + dy;
+              const nz = z + dz;
+
+              // If neighbor is out of bounds or empty, this is a surface voxel
+              if (
+                nx < 0 ||
+                nx >= shape[0] ||
+                ny < 0 ||
+                ny >= shape[1] ||
+                nz < 0 ||
+                nz >= shape[2] ||
+                !volume[nx][ny][nz]
+              ) {
+                isSurface = true;
+                break;
+              }
+            }
+          }
+
+          if (isSurface) {
+            surfaceVoxels.push(voxel);
+          }
+        }
+
+        console.log(
+          `Found ${surfaceVoxels.length} surface voxels out of ${
+            voxels.length
+          } total voxels (${Math.round(
+            (surfaceVoxels.length / voxels.length) * 100
+          )}%)`
+        );
+
+        return surfaceVoxels;
+      }
+
+      // Create brain volume visualization
+      function createBrainVolume(voxels, shape) {
+        // Create a group to hold all elements
+        brainGroup = new THREE.Group(); // Store reference for rotation
+
+        // Calculate center offset to center the brain
+        const centerOffset = [-shape[0] / 2, -shape[1] / 2, -shape[2] / 2];
+
+        // Reorient the brain to be horizontal (neurological convention)
+        // This rotates the brain so that anterior is toward the front
+        brainGroup.rotation.x = -Math.PI / 2; // Rotate around X-axis to make Y point forward
+
+        // Create voxels for the brain surface
+        createBrainVoxels(voxels, shape, centerOffset, brainGroup);
+
+        // Add the brain group to the scene
+        scene.add(brainGroup);
+
+        // Set up camera position for a good top-front-side view of the brain
+        const maxDim = Math.max(...shape);
+
+        // Position camera for a more zoomed-in top-front-side view
+        // X: positive (right side of brain)
+        // Y: positive (above brain)
+        // Z: negative (in front of brain)
+        camera.position.set(maxDim * 0.8, maxDim * 0.7, -maxDim * 0.6);
+
+        // Look at the center of the brain
+        camera.lookAt(0, 0, 0);
+        controls.update();
+
+        // Update voxel count
+        document.getElementById("voxel-count").textContent = voxels.length;
+
+        // Add info about orientation to the info panel
+        const infoDiv = document.getElementById("info");
+        const orientationInfo = document.createElement("p");
+        orientationInfo.innerHTML =
+          "Orientation: <span style='color:#ff0000'>X (R→L)</span>, <span style='color:#00ff00'>Y (A→P)</span>, <span style='color:#0000ff'>Z (S→I)</span>";
+        infoDiv.appendChild(orientationInfo);
+
+        // Show rotation toggle button after brain is loaded
+        document.getElementById("rotation-toggle").style.display = "block";
+      }
+
+      // Create voxels for the brain surface
+      function createBrainVoxels(voxels, shape, centerOffset, brainGroup) {
+        console.log(
+          `Creating voxels for ${voxels.length} surface coordinates...`
+        );
+
+        // Create a box for each voxel
+        const boxSize = 0.92; // Slightly smaller to create visible gaps
+        const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+
+        // Create a material that better shows the brain's contours
+        const material = new THREE.MeshPhongMaterial({
+          color: 0x88ccff,
+          specular: 0x111111,
+          shininess: 10,
+          transparent: false,
+          side: THREE.FrontSide,
+          flatShading: true,
+        });
+
+        // Use instanced mesh for better performance
+        const instancedMesh = new THREE.InstancedMesh(
+          boxGeometry,
+          material,
+          voxels.length
+        );
+
+        // Set matrix for each instance
+        const matrix = new THREE.Matrix4();
+        for (let i = 0; i < voxels.length; i++) {
+          const voxel = voxels[i];
+          const [x, y, z] = voxel;
+
+          matrix.setPosition(
+            x + centerOffset[0],
+            y + centerOffset[1],
+            z + centerOffset[2]
+          );
+
+          instancedMesh.setMatrixAt(i, matrix);
+
+          // Set color based on height with more contrast
+          const heightRatio = y / shape[1];
+          const color = new THREE.Color(
+            0.3 + 0.7 * heightRatio, // R
+            0.4 + 0.3 * heightRatio, // G - less green variation for better contrast
+            0.9 - 0.6 * heightRatio // B - more blue variation for better contrast
+          );
+          instancedMesh.setColorAt(i, color);
+        }
+
+        // Update instance matrix and colors
+        instancedMesh.instanceMatrix.needsUpdate = true;
+        if (instancedMesh.instanceColor) {
+          instancedMesh.instanceColor.needsUpdate = true;
+        }
+
+        // Add the voxels to the brain group
+        brainGroup.add(instancedMesh);
+
+        // Add edges with reduced number (only some voxels get edges)
+        createSimplifiedEdges(voxels, shape, centerOffset, brainGroup);
+
+        console.log(
+          "Surface voxels rendered with enhanced lighting for gyri visibility"
+        );
+      }
+
+      // Create simplified edges (only for some voxels)
+      function createSimplifiedEdges(voxels, shape, centerOffset, brainGroup) {
+        // Create a merged geometry for edges
+        const edgePositions = [];
+
+        // Create a box geometry for reference
+        const boxSize = 0.92;
+        const halfSize = boxSize / 2;
+
+        // Define the 12 edges of a cube
+        const edgeDefinitions = [
+          // Bottom face
+          [-halfSize, -halfSize, -halfSize, halfSize, -halfSize, -halfSize],
+          [halfSize, -halfSize, -halfSize, halfSize, -halfSize, halfSize],
+          [halfSize, -halfSize, halfSize, -halfSize, -halfSize, halfSize],
+          [-halfSize, -halfSize, halfSize, -halfSize, -halfSize, -halfSize],
+
+          // Top face
+          [-halfSize, halfSize, -halfSize, halfSize, halfSize, -halfSize],
+          [halfSize, halfSize, -halfSize, halfSize, halfSize, halfSize],
+          [halfSize, halfSize, halfSize, -halfSize, halfSize, halfSize],
+          [-halfSize, halfSize, halfSize, -halfSize, halfSize, -halfSize],
+
+          // Connecting edges
+          [-halfSize, -halfSize, -halfSize, -halfSize, halfSize, -halfSize],
+          [halfSize, -halfSize, -halfSize, halfSize, halfSize, -halfSize],
+          [halfSize, -halfSize, halfSize, halfSize, halfSize, halfSize],
+          [-halfSize, -halfSize, halfSize, -halfSize, halfSize, halfSize],
+        ];
+
+        // Only add edges for voxels at regular intervals (reduces number of edges)
+        const edgeInterval = 4; // Only show edges for every 4th voxel
+
+        for (let i = 0; i < voxels.length; i++) {
+          // Skip some voxels to reduce edge count
+          if (i % edgeInterval !== 0) continue;
+
+          const voxel = voxels[i];
+          const [x, y, z] = voxel;
+          const posX = x + centerOffset[0];
+          const posY = y + centerOffset[1];
+          const posZ = z + centerOffset[2];
+
+          // Add each edge
+          for (const [x1, y1, z1, x2, y2, z2] of edgeDefinitions) {
+            edgePositions.push(
+              posX + x1,
+              posY + y1,
+              posZ + z1,
+              posX + x2,
+              posY + y2,
+              posZ + z2
+            );
+          }
+        }
+
+        // Create the geometry
+        const edgeGeometry = new THREE.BufferGeometry();
+        edgeGeometry.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(edgePositions, 3)
+        );
+
+        // Create the material - thinner, semi-transparent edges
+        const edgeMaterial = new THREE.LineBasicMaterial({
+          color: 0x000000,
+          linewidth: 1,
+          transparent: true,
+          opacity: 0.2, // More subtle edges
+        });
+
+        // Create the line segments
+        const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+        brainGroup.add(edges);
+
+        console.log("Added simplified edges to selected voxels");
+      }
+
+      // Initialize and start animation
+      init();
+      animate();
+    </script>
+  </body>
+</html>
