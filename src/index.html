@@ -86,14 +86,25 @@
         controls.maxPolarAngle = Math.PI; // Allow full vertical rotation
         controls.rotateSpeed = 0.7; // Adjust rotation speed
 
-        // Add balanced lighting for good visibility with some texture
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Strong ambient light for base visibility
+        // Enhanced lighting setup for better gyri visibility
+        // Base ambient light for overall visibility
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
 
-        // Add subtle directional light for texture
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
-        directionalLight.position.set(1, 1, 1);
-        scene.add(directionalLight);
+        // Main directional light from top-right
+        const mainLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        mainLight.position.set(1, 1, 1);
+        scene.add(mainLight);
+
+        // Secondary directional light from bottom-left (fill light)
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        fillLight.position.set(-1, -0.5, -1);
+        scene.add(fillLight);
+
+        // Rim light from behind to highlight edges
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        rimLight.position.set(0, 0, -1);
+        scene.add(rimLight);
 
         // Handle window resize
         window.addEventListener("resize", onWindowResize, false);
@@ -286,12 +297,14 @@
         );
 
         // Create a box for each voxel
-        const boxSize = 0.9; // Slightly smaller to create visible gaps
+        const boxSize = 0.92; // Slightly smaller to create visible gaps
         const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
 
-        // Create a material with balanced properties
-        const material = new THREE.MeshToonMaterial({
+        // Create a material that better shows the brain's contours
+        const material = new THREE.MeshPhongMaterial({
           color: 0x88ccff,
+          specular: 0x111111,
+          shininess: 10,
           transparent: false,
           side: THREE.FrontSide,
           flatShading: true,
@@ -318,12 +331,12 @@
 
           instancedMesh.setMatrixAt(i, matrix);
 
-          // Set color based on height
+          // Set color based on height with more contrast
           const heightRatio = y / shape[1];
           const color = new THREE.Color(
             0.3 + 0.7 * heightRatio, // R
-            0.5, // G
-            0.8 - 0.5 * heightRatio // B
+            0.4 + 0.3 * heightRatio, // G - less green variation for better contrast
+            0.9 - 0.6 * heightRatio // B - more blue variation for better contrast
           );
           instancedMesh.setColorAt(i, color);
         }
@@ -341,7 +354,7 @@
         createSimplifiedEdges(voxels, shape, centerOffset, brainGroup);
 
         console.log(
-          "Surface voxels rendered with balanced visibility and texture"
+          "Surface voxels rendered with enhanced lighting for gyri visibility"
         );
       }
 
@@ -351,7 +364,7 @@
         const edgePositions = [];
 
         // Create a box geometry for reference
-        const boxSize = 0.9;
+        const boxSize = 0.92;
         const halfSize = boxSize / 2;
 
         // Define the 12 edges of a cube
@@ -376,7 +389,7 @@
         ];
 
         // Only add edges for voxels at regular intervals (reduces number of edges)
-        const edgeInterval = 3; // Only show edges for every 3rd voxel
+        const edgeInterval = 4; // Only show edges for every 4th voxel
 
         for (let i = 0; i < voxels.length; i++) {
           // Skip some voxels to reduce edge count
@@ -413,7 +426,7 @@
           color: 0x000000,
           linewidth: 1,
           transparent: true,
-          opacity: 0.3,
+          opacity: 0.2, // More subtle edges
         });
 
         // Create the line segments
