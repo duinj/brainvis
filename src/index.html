@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Brain Voxel Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: white;
+      }
+      #info {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: #333;
+        font-family: Arial, sans-serif;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+        max-width: 300px;
+      }
+      #loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+        color: #333;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 20px;
+        border-radius: 10px;
+        z-index: 100;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">
+      <h2>3D Brain Voxel Visualization</h2>
+      <p>Loading voxels: <span id="voxel-count">0</span></p>
+      <p>Brain dimensions: <span id="dimensions">Loading...</span></p>
+      <p>
+        Controls: Left-click + drag to rotate, scroll to zoom, right-click +
+        drag to pan
+      </p>
+    </div>
+    <div id="loading">Loading brain voxels...</div>
+
+    <script>
+      // Main Three.js variables
+      let scene, camera, renderer, controls;
+      let voxelCount = 0;
+
+      // Initialize the scene
+      function init() {
+        // Create scene
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff);
+
+        // Create camera
+        camera = new THREE.PerspectiveCamera(
+          60,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          2000
+        );
+        camera.position.set(100, 100, 100);
+
+        // Create renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Add orbit controls for interaction
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.25;
+
+        // Add ambient light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        // Add directional light
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
+
+        // Handle window resize
+        window.addEventListener("resize", onWindowResize, false);
+
+        // Load and visualize voxels
+        loadVoxels();
+      }
+
+      // Handle window resize
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      // Load voxels from JSON file
+      function loadVoxels() {
+        fetch("whole_brain_atlas_voxels.json")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            const voxels = data.voxels;
+            let shape = data.shape;
+
+            // If shape is not provided, determine it from the max coordinates
+            if (!shape) {
+              const maxX = Math.max(...voxels.map((v) => v[0])) + 1;
+              const maxY = Math.max(...voxels.map((v) => v[1])) + 1;
+              const maxZ = Math.max(...voxels.map((v) => v[2])) + 1;
+              shape = [maxX, maxY, maxZ];
+            }
+
+            // Update info panel
+            document.getElementById(
+              "dimensions"
+            ).textContent = `${shape[0]} × ${shape[1]} × ${shape[2]}`;
+
+            // Determine if we need to downsample based on voxel count
+            const totalVoxels = voxels.length;
+            let downsampleFactor = 1;
+
+            // Adjust downsample factor based on voxel count
+            if (totalVoxels > 100000) {
+              downsampleFactor = 4;
+            } else if (totalVoxels > 50000) {
+              downsampleFactor = 2;
+            }
+
+            // Create voxel visualization
+            createVoxels(voxels, shape, downsampleFactor);
+
+            // Hide loading message
+            document.getElementById("loading").style.display = "none";
+          })
+          .catch((error) => {
+            console.error("Error loading voxel data:", error);
+            document.getElementById("loading").textContent =
+              "Error loading voxel data. Check console for details.";
+          });
+      }
+
+      // Create voxel visualization
+      function createVoxels(voxels, shape, downsampleFactor = 1) {
+        // Create a group to hold all voxels
+        const voxelGroup = new THREE.Group();
+
+        // Calculate center offset to center the brain
+        const centerOffset = [
+          -shape[0] / (2 * downsampleFactor),
+          -shape[1] / (2 * downsampleFactor),
+          -shape[2] / (2 * downsampleFactor),
+        ];
+
+        // Create a single box geometry for all voxels
+        const boxSize = 1 / downsampleFactor;
+        const geometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+
+        // Create materials for voxel faces and edges
+        const faceMaterial = new THREE.MeshPhongMaterial({
+          color: 0x88ccff,
+          transparent: true,
+          opacity: 0.3,
+          side: THREE.DoubleSide,
+        });
+
+        // Create edge material
+        const edgeMaterial = new THREE.LineBasicMaterial({
+          color: 0x000000,
+          linewidth: 1,
+        });
+
+        // Process voxels in batches to avoid freezing the browser
+        const batchSize = 1000;
+        const totalVoxels = voxels.length;
+        let processedCount = 0;
+
+        function processBatch(startIdx) {
+          const endIdx = Math.min(startIdx + batchSize, totalVoxels);
+
+          for (let i = startIdx; i < endIdx; i++) {
+            const voxel = voxels[i];
+            const [x, y, z] = voxel;
+
+            // Skip voxels based on downsample factor
+            if (downsampleFactor > 1) {
+              if (
+                x % downsampleFactor !== 0 ||
+                y % downsampleFactor !== 0 ||
+                z % downsampleFactor !== 0
+              ) {
+                continue;
+              }
+            }
+
+            // Create voxel mesh
+            const mesh = new THREE.Mesh(geometry, faceMaterial);
+
+            // Position the voxel
+            mesh.position.set(
+              x / downsampleFactor + centerOffset[0],
+              y / downsampleFactor + centerOffset[1],
+              z / downsampleFactor + centerOffset[2]
+            );
+
+            // Add edges
+            const edges = new THREE.LineSegments(
+              new THREE.EdgesGeometry(geometry),
+              edgeMaterial
+            );
+            edges.position.copy(mesh.position);
+
+            // Add to group
+            voxelGroup.add(mesh);
+            voxelGroup.add(edges);
+
+            // Update voxel count
+            voxelCount++;
+          }
+
+          // Update the counter
+          document.getElementById("voxel-count").textContent = voxelCount;
+          processedCount = endIdx;
+
+          // Process next batch or finish
+          if (processedCount < totalVoxels) {
+            setTimeout(() => processBatch(processedCount), 0);
+          } else {
+            // Add the voxel group to the scene
+            scene.add(voxelGroup);
+
+            // Adjust camera position based on brain size
+            const maxDim = Math.max(...shape) / downsampleFactor;
+            camera.position.set(maxDim, maxDim, maxDim);
+            controls.update();
+          }
+        }
+
+        // Start processing batches
+        processBatch(0);
+      }
+
+      // Initialize and start animation
+      init();
+      animate();
+    </script>
+  </body>
+</html>
