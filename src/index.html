@@ -122,34 +122,15 @@
           })
           .then((data) => {
             const voxels = data.voxels;
-            let shape = data.shape;
-
-            // If shape is not provided, determine it from the max coordinates
-            if (!shape) {
-              const maxX = Math.max(...voxels.map((v) => v[0])) + 1;
-              const maxY = Math.max(...voxels.map((v) => v[1])) + 1;
-              const maxZ = Math.max(...voxels.map((v) => v[2])) + 1;
-              shape = [maxX, maxY, maxZ];
-            }
+            const shape = data.shape;
 
             // Update info panel
             document.getElementById(
               "dimensions"
             ).textContent = `${shape[0]} × ${shape[1]} × ${shape[2]}`;
 
-            // Determine if we need to downsample based on voxel count
-            const totalVoxels = voxels.length;
-            let downsampleFactor = 1;
-
-            // Adjust downsample factor based on voxel count
-            if (totalVoxels > 100000) {
-              downsampleFactor = 4;
-            } else if (totalVoxels > 50000) {
-              downsampleFactor = 2;
-            }
-
-            // Create voxel visualization
-            createVoxels(voxels, shape, downsampleFactor);
+            // Create brain volume visualization
+            createBrainVolume(voxels, shape);
 
             // Hide loading message
             document.getElementById("loading").style.display = "none";
@@ -161,104 +142,277 @@
           });
       }
 
-      // Create voxel visualization
-      function createVoxels(voxels, shape, downsampleFactor = 1) {
-        // Create a group to hold all voxels
-        const voxelGroup = new THREE.Group();
+      // Create brain volume visualization
+      function createBrainVolume(voxels, shape) {
+        // Create a group to hold all elements
+        const brainGroup = new THREE.Group();
 
         // Calculate center offset to center the brain
-        const centerOffset = [
-          -shape[0] / (2 * downsampleFactor),
-          -shape[1] / (2 * downsampleFactor),
-          -shape[2] / (2 * downsampleFactor),
-        ];
+        const centerOffset = [-shape[0] / 2, -shape[1] / 2, -shape[2] / 2];
 
-        // Create a single box geometry for all voxels
-        const boxSize = 1 / downsampleFactor;
-        const geometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+        // Create coordinate system grid
+        const gridHelper = new THREE.GridHelper(
+          Math.max(...shape),
+          Math.max(...shape)
+        );
+        gridHelper.position.set(
+          centerOffset[0] + shape[0] / 2,
+          centerOffset[1],
+          centerOffset[2] + shape[2] / 2
+        );
+        brainGroup.add(gridHelper);
 
-        // Create materials for voxel faces and edges
-        const faceMaterial = new THREE.MeshPhongMaterial({
-          color: 0x88ccff,
+        // Add axes helper
+        const axesHelper = new THREE.AxesHelper(Math.max(...shape) * 0.5);
+        axesHelper.position.set(
+          centerOffset[0],
+          centerOffset[1],
+          centerOffset[2]
+        );
+        brainGroup.add(axesHelper);
+
+        // Create wireframe for the entire brain volume
+        createBrainWireframe(shape, centerOffset, brainGroup);
+
+        // Create filled voxels for the specific regions
+        createFilledVoxels(voxels, shape, centerOffset, brainGroup);
+
+        // Add the brain group to the scene
+        scene.add(brainGroup);
+
+        // Adjust camera position based on brain size
+        const maxDim = Math.max(...shape) * 1.5;
+        camera.position.set(maxDim, maxDim, maxDim);
+        controls.update();
+
+        // Update voxel count
+        document.getElementById("voxel-count").textContent = voxels.length;
+      }
+
+      // Create wireframe for the entire brain volume
+      function createBrainWireframe(shape, centerOffset, brainGroup) {
+        console.log("Creating brain volume wireframe...");
+
+        // Create wireframe for the entire brain volume
+        const wireframeMaterial = new THREE.LineBasicMaterial({
+          color: 0xcccccc,
+          opacity: 0.2,
           transparent: true,
-          opacity: 0.3,
-          side: THREE.DoubleSide,
         });
 
-        // Create edge material
-        const edgeMaterial = new THREE.LineBasicMaterial({
-          color: 0x000000,
-          linewidth: 1,
-        });
+        // Create a box representing the entire brain volume
+        const volumeGeometry = new THREE.BoxGeometry(
+          shape[0],
+          shape[1],
+          shape[2]
+        );
+        const volumeEdges = new THREE.EdgesGeometry(volumeGeometry);
+        const volumeWireframe = new THREE.LineSegments(
+          volumeEdges,
+          wireframeMaterial
+        );
 
-        // Process voxels in batches to avoid freezing the browser
-        const batchSize = 1000;
-        const totalVoxels = voxels.length;
-        let processedCount = 0;
+        // Position the wireframe at the center of the volume
+        volumeWireframe.position.set(
+          centerOffset[0] + shape[0] / 2,
+          centerOffset[1] + shape[1] / 2,
+          centerOffset[2] + shape[2] / 2
+        );
 
-        function processBatch(startIdx) {
-          const endIdx = Math.min(startIdx + batchSize, totalVoxels);
+        brainGroup.add(volumeWireframe);
 
-          for (let i = startIdx; i < endIdx; i++) {
-            const voxel = voxels[i];
-            const [x, y, z] = voxel;
+        // Create a grid of lines to show the voxel boundaries (only at intervals to avoid too many lines)
+        const interval = Math.max(5, Math.floor(Math.max(...shape) / 20)); // Adjust interval based on brain size
 
-            // Skip voxels based on downsample factor
-            if (downsampleFactor > 1) {
-              if (
-                x % downsampleFactor !== 0 ||
-                y % downsampleFactor !== 0 ||
-                z % downsampleFactor !== 0
-              ) {
-                continue;
-              }
-            }
-
-            // Create voxel mesh
-            const mesh = new THREE.Mesh(geometry, faceMaterial);
-
-            // Position the voxel
-            mesh.position.set(
-              x / downsampleFactor + centerOffset[0],
-              y / downsampleFactor + centerOffset[1],
-              z / downsampleFactor + centerOffset[2]
+        // Create lines for each axis
+        for (let i = 0; i <= shape[0]; i += interval) {
+          for (let j = 0; j <= shape[1]; j += interval) {
+            // Create Z-axis line
+            const zGeometry = new THREE.BufferGeometry();
+            zGeometry.setAttribute(
+              "position",
+              new THREE.Float32BufferAttribute(
+                [
+                  i + centerOffset[0],
+                  j + centerOffset[1],
+                  centerOffset[2],
+                  i + centerOffset[0],
+                  j + centerOffset[1],
+                  shape[2] + centerOffset[2],
+                ],
+                3
+              )
             );
-
-            // Add edges
-            const edges = new THREE.LineSegments(
-              new THREE.EdgesGeometry(geometry),
-              edgeMaterial
-            );
-            edges.position.copy(mesh.position);
-
-            // Add to group
-            voxelGroup.add(mesh);
-            voxelGroup.add(edges);
-
-            // Update voxel count
-            voxelCount++;
-          }
-
-          // Update the counter
-          document.getElementById("voxel-count").textContent = voxelCount;
-          processedCount = endIdx;
-
-          // Process next batch or finish
-          if (processedCount < totalVoxels) {
-            setTimeout(() => processBatch(processedCount), 0);
-          } else {
-            // Add the voxel group to the scene
-            scene.add(voxelGroup);
-
-            // Adjust camera position based on brain size
-            const maxDim = Math.max(...shape) / downsampleFactor;
-            camera.position.set(maxDim, maxDim, maxDim);
-            controls.update();
+            const zLine = new THREE.Line(zGeometry, wireframeMaterial);
+            brainGroup.add(zLine);
           }
         }
 
-        // Start processing batches
-        processBatch(0);
+        for (let i = 0; i <= shape[0]; i += interval) {
+          for (let k = 0; k <= shape[2]; k += interval) {
+            // Create Y-axis line
+            const yGeometry = new THREE.BufferGeometry();
+            yGeometry.setAttribute(
+              "position",
+              new THREE.Float32BufferAttribute(
+                [
+                  i + centerOffset[0],
+                  centerOffset[1],
+                  k + centerOffset[2],
+                  i + centerOffset[0],
+                  shape[1] + centerOffset[1],
+                  k + centerOffset[2],
+                ],
+                3
+              )
+            );
+            const yLine = new THREE.Line(yGeometry, wireframeMaterial);
+            brainGroup.add(yLine);
+          }
+        }
+
+        for (let j = 0; j <= shape[1]; j += interval) {
+          for (let k = 0; k <= shape[2]; k += interval) {
+            // Create X-axis line
+            const xGeometry = new THREE.BufferGeometry();
+            xGeometry.setAttribute(
+              "position",
+              new THREE.Float32BufferAttribute(
+                [
+                  centerOffset[0],
+                  j + centerOffset[1],
+                  k + centerOffset[2],
+                  shape[0] + centerOffset[0],
+                  j + centerOffset[1],
+                  k + centerOffset[2],
+                ],
+                3
+              )
+            );
+            const xLine = new THREE.Line(xGeometry, wireframeMaterial);
+            brainGroup.add(xLine);
+          }
+        }
+
+        console.log("Brain volume wireframe created");
+      }
+
+      // Create filled voxels for specific regions
+      function createFilledVoxels(voxels, shape, centerOffset, brainGroup) {
+        console.log(
+          `Creating filled voxels for ${voxels.length} coordinates...`
+        );
+
+        // Determine if we need to use different rendering methods based on voxel count
+        const totalVoxels = voxels.length;
+
+        if (totalVoxels > 50000) {
+          // For very large datasets, use point cloud
+          createVoxelPointCloud(voxels, shape, centerOffset, brainGroup);
+        } else {
+          // For smaller datasets, use instanced mesh
+          createVoxelInstancedMesh(voxels, shape, centerOffset, brainGroup);
+        }
+      }
+
+      // Create a point cloud for voxels (for very large datasets)
+      function createVoxelPointCloud(voxels, shape, centerOffset, brainGroup) {
+        const positions = new Float32Array(voxels.length * 3);
+        const colors = new Float32Array(voxels.length * 3);
+
+        for (let i = 0; i < voxels.length; i++) {
+          const voxel = voxels[i];
+          const [x, y, z] = voxel;
+
+          // Set position
+          positions[i * 3] = x + centerOffset[0];
+          positions[i * 3 + 1] = y + centerOffset[1];
+          positions[i * 3 + 2] = z + centerOffset[2];
+
+          // Set color (gradient based on height)
+          const heightRatio = y / shape[1];
+          colors[i * 3] = 0.3 + 0.7 * heightRatio; // R
+          colors[i * 3 + 1] = 0.5; // G
+          colors[i * 3 + 2] = 0.8 - 0.5 * heightRatio; // B
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute(
+          "position",
+          new THREE.BufferAttribute(positions, 3)
+        );
+        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+        const material = new THREE.PointsMaterial({
+          size: 0.8,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.8,
+          sizeAttenuation: true,
+        });
+
+        const pointCloud = new THREE.Points(geometry, material);
+        brainGroup.add(pointCloud);
+
+        console.log("Voxels rendered as point cloud for performance");
+      }
+
+      // Create instanced mesh for voxels
+      function createVoxelInstancedMesh(
+        voxels,
+        shape,
+        centerOffset,
+        brainGroup
+      ) {
+        // Create a slightly smaller box to avoid z-fighting with the wireframe
+        const boxSize = 0.9;
+        const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+        const material = new THREE.MeshPhongMaterial({
+          color: 0x88ccff,
+          transparent: true,
+          opacity: 0.5,
+          side: THREE.DoubleSide,
+        });
+
+        // Create instanced mesh
+        const instancedMesh = new THREE.InstancedMesh(
+          boxGeometry,
+          material,
+          voxels.length
+        );
+
+        // Set matrix for each instance
+        const matrix = new THREE.Matrix4();
+        for (let i = 0; i < voxels.length; i++) {
+          const voxel = voxels[i];
+          const [x, y, z] = voxel;
+
+          matrix.setPosition(
+            x + centerOffset[0],
+            y + centerOffset[1],
+            z + centerOffset[2]
+          );
+
+          instancedMesh.setMatrixAt(i, matrix);
+
+          // Set color based on height
+          const heightRatio = y / shape[1];
+          const color = new THREE.Color(
+            0.3 + 0.7 * heightRatio, // R
+            0.5, // G
+            0.8 - 0.5 * heightRatio // B
+          );
+          instancedMesh.setColorAt(i, color);
+        }
+
+        // Update instance matrix and colors
+        instancedMesh.instanceMatrix.needsUpdate = true;
+        if (instancedMesh.instanceColor) {
+          instancedMesh.instanceColor.needsUpdate = true;
+        }
+
+        brainGroup.add(instancedMesh);
+        console.log("Voxels rendered as instanced mesh");
       }
 
       // Initialize and start animation
