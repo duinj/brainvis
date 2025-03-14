@@ -159,18 +159,6 @@
         // This rotates the brain so that anterior is toward the front
         brainGroup.rotation.x = -Math.PI / 2; // Rotate around X-axis to make Y point forward
 
-        // Create coordinate system grid
-        const gridHelper = new THREE.GridHelper(
-          Math.max(...shape),
-          Math.max(...shape)
-        );
-        gridHelper.position.set(
-          centerOffset[0] + shape[0] / 2,
-          centerOffset[1],
-          centerOffset[2] + shape[2] / 2
-        );
-        brainGroup.add(gridHelper);
-
         // Add axes helper
         const axesHelper = new THREE.AxesHelper(Math.max(...shape) * 0.5);
         axesHelper.position.set(
