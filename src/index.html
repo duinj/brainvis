@@ -86,13 +86,13 @@
         controls.maxPolarAngle = Math.PI; // Allow full vertical rotation
         controls.rotateSpeed = 0.7; // Adjust rotation speed
 
-        // Add ambient light
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        // Add balanced lighting for good visibility with some texture
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Strong ambient light for base visibility
         scene.add(ambientLight);
 
-        // Add directional light
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(100, 100, 100);
+        // Add subtle directional light for texture
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        directionalLight.position.set(1, 1, 1);
         scene.add(directionalLight);
 
         // Handle window resize
@@ -286,16 +286,15 @@
         );
 
         // Create a box for each voxel
-        const boxSize = 1.0;
+        const boxSize = 0.9; // Slightly smaller to create visible gaps
         const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
 
-        // Create a single material that looks like transparent voxels with edges
-        const material = new THREE.MeshBasicMaterial({
+        // Create a material with balanced properties
+        const material = new THREE.MeshToonMaterial({
           color: 0x88ccff,
-          transparent: true,
-          opacity: 0.2,
-          wireframe: true,
-          wireframeLinewidth: 1,
+          transparent: false,
+          side: THREE.FrontSide,
+          flatShading: true,
         });
 
         // Use instanced mesh for better performance
@@ -335,8 +334,93 @@
           instancedMesh.instanceColor.needsUpdate = true;
         }
 
+        // Add the voxels to the brain group
         brainGroup.add(instancedMesh);
-        console.log("Surface voxels rendered with wireframe");
+
+        // Add edges with reduced number (only some voxels get edges)
+        createSimplifiedEdges(voxels, shape, centerOffset, brainGroup);
+
+        console.log(
+          "Surface voxels rendered with balanced visibility and texture"
+        );
+      }
+
+      // Create simplified edges (only for some voxels)
+      function createSimplifiedEdges(voxels, shape, centerOffset, brainGroup) {
+        // Create a merged geometry for edges
+        const edgePositions = [];
+
+        // Create a box geometry for reference
+        const boxSize = 0.9;
+        const halfSize = boxSize / 2;
+
+        // Define the 12 edges of a cube
+        const edgeDefinitions = [
+          // Bottom face
+          [-halfSize, -halfSize, -halfSize, halfSize, -halfSize, -halfSize],
+          [halfSize, -halfSize, -halfSize, halfSize, -halfSize, halfSize],
+          [halfSize, -halfSize, halfSize, -halfSize, -halfSize, halfSize],
+          [-halfSize, -halfSize, halfSize, -halfSize, -halfSize, -halfSize],
+
+          // Top face
+          [-halfSize, halfSize, -halfSize, halfSize, halfSize, -halfSize],
+          [halfSize, halfSize, -halfSize, halfSize, halfSize, halfSize],
+          [halfSize, halfSize, halfSize, -halfSize, halfSize, halfSize],
+          [-halfSize, halfSize, halfSize, -halfSize, halfSize, -halfSize],
+
+          // Connecting edges
+          [-halfSize, -halfSize, -halfSize, -halfSize, halfSize, -halfSize],
+          [halfSize, -halfSize, -halfSize, halfSize, halfSize, -halfSize],
+          [halfSize, -halfSize, halfSize, halfSize, halfSize, halfSize],
+          [-halfSize, -halfSize, halfSize, -halfSize, halfSize, halfSize],
+        ];
+
+        // Only add edges for voxels at regular intervals (reduces number of edges)
+        const edgeInterval = 3; // Only show edges for every 3rd voxel
+
+        for (let i = 0; i < voxels.length; i++) {
+          // Skip some voxels to reduce edge count
+          if (i % edgeInterval !== 0) continue;
+
+          const voxel = voxels[i];
+          const [x, y, z] = voxel;
+          const posX = x + centerOffset[0];
+          const posY = y + centerOffset[1];
+          const posZ = z + centerOffset[2];
+
+          // Add each edge
+          for (const [x1, y1, z1, x2, y2, z2] of edgeDefinitions) {
+            edgePositions.push(
+              posX + x1,
+              posY + y1,
+              posZ + z1,
+              posX + x2,
+              posY + y2,
+              posZ + z2
+            );
+          }
+        }
+
+        // Create the geometry
+        const edgeGeometry = new THREE.BufferGeometry();
+        edgeGeometry.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(edgePositions, 3)
+        );
+
+        // Create the material - thinner, semi-transparent edges
+        const edgeMaterial = new THREE.LineBasicMaterial({
+          color: 0x000000,
+          linewidth: 1,
+          transparent: true,
+          opacity: 0.3,
+        });
+
+        // Create the line segments
+        const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+        brainGroup.add(edges);
+
+        console.log("Added simplified edges to selected voxels");
       }
 
       // Initialize and start animation
