@@ -24,6 +24,19 @@
         border-radius: 5px;
         max-width: 300px;
       }
+      .color-box {
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        margin-right: 5px;
+        border: 1px solid #666;
+        vertical-align: middle;
+      }
+      .legend {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #ccc;
+      }
       #loading {
         position: absolute;
         top: 50%;
@@ -195,12 +208,15 @@
         renderer.render(scene, camera);
       }
 
-      // Load voxels from JSON file
+      // Load voxels from JSON files
       function loadVoxels() {
+        // First load the whole brain atlas
         fetch("whole_brain_atlas_voxels.json")
           .then((response) => {
             if (!response.ok) {
-              throw new Error("Network response was not ok");
+              throw new Error(
+                "Network response was not ok for whole brain data"
+              );
             }
             return response.json();
           })
@@ -218,6 +234,25 @@
 
             // Create brain volume visualization with only surface voxels
             createBrainVolume(surfaceVoxels, shape);
+
+            // Now load the DLPFC atlas
+            return fetch("dlpfc_atlas_voxels.json");
+          })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok for DLPFC data");
+            }
+            return response.json();
+          })
+          .then((dlpfcData) => {
+            // Add DLPFC voxels to the visualization
+            addDLPFCVoxels(dlpfcData.voxels, dlpfcData.shape);
+
+            // Update info panel with DLPFC count
+            const infoDiv = document.getElementById("info");
+            const dlpfcInfo = document.createElement("p");
+            dlpfcInfo.innerHTML = `DLPFC voxels: <span style="color:#00aa00">${dlpfcData.voxels.length}</span>`;
+            infoDiv.appendChild(dlpfcInfo);
 
             // Hide loading message
             document.getElementById("loading").style.display = "none";
@@ -363,6 +398,16 @@
         orientationInfo.innerHTML =
           "Orientation: <span style='color:#444444'>X (R→L)</span>, <span style='color:#666666'>Y (A→P)</span>, <span style='color:#888888'>Z (S→I)</span>";
         infoDiv.appendChild(orientationInfo);
+
+        // Add legend for color coding
+        const legend = document.createElement("div");
+        legend.className = "legend";
+        legend.innerHTML = `
+          <p><strong>Legend:</strong></p>
+          <p><span class="color-box" style="background-color:#888888"></span> Whole Brain Surface</p>
+          <p><span class="color-box" style="background-color:#00aa00"></span> DLPFC Region</p>
+        `;
+        infoDiv.appendChild(legend);
 
         // Show rotation toggle button after brain is loaded
         document.getElementById("rotation-toggle").style.display = "block";
@@ -511,6 +556,60 @@
         brainGroup.add(edges);
 
         console.log("Added simplified edges to selected voxels");
+      }
+
+      // Add DLPFC voxels to the visualization
+      function addDLPFCVoxels(voxels, shape) {
+        console.log(`Adding ${voxels.length} DLPFC voxels...`);
+
+        // Calculate center offset to match the main brain
+        const centerOffset = [-shape[0] / 2, -shape[1] / 2, -shape[2] / 2];
+
+        // Create a box for each voxel
+        const boxSize = 0.92; // Same size as main brain voxels
+        const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+
+        // Create a green material for DLPFC voxels
+        const material = new THREE.MeshStandardMaterial({
+          color: 0x00aa00, // Green color
+          roughness: 0.6,
+          metalness: 0.2,
+          transparent: false,
+          side: THREE.FrontSide,
+          flatShading: true,
+          emissive: 0x003300, // Slight emissive glow to make it stand out
+          emissiveIntensity: 0.3,
+        });
+
+        // Use instanced mesh for better performance
+        const instancedMesh = new THREE.InstancedMesh(
+          boxGeometry,
+          material,
+          voxels.length
+        );
+
+        // Set matrix for each instance
+        const matrix = new THREE.Matrix4();
+        for (let i = 0; i < voxels.length; i++) {
+          const voxel = voxels[i];
+          const [x, y, z] = voxel;
+
+          matrix.setPosition(
+            x + centerOffset[0],
+            y + centerOffset[1],
+            z + centerOffset[2]
+          );
+
+          instancedMesh.setMatrixAt(i, matrix);
+        }
+
+        // Update instance matrix
+        instancedMesh.instanceMatrix.needsUpdate = true;
+
+        // Add the DLPFC voxels to the brain group
+        brainGroup.add(instancedMesh);
+
+        console.log("DLPFC voxels added in green color");
       }
 
       // Initialize and start animation
