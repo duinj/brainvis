@@ -289,11 +289,13 @@
         const boxSize = 1.0;
         const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
 
-        // Create material for the voxels
-        const material = new THREE.MeshLambertMaterial({
+        // Create a single material that looks like transparent voxels with edges
+        const material = new THREE.MeshBasicMaterial({
           color: 0x88ccff,
-          transparent: false,
-          side: THREE.FrontSide,
+          transparent: true,
+          opacity: 0.2,
+          wireframe: true,
+          wireframeLinewidth: 1,
         });
 
         // Use instanced mesh for better performance
@@ -334,7 +336,7 @@
         }
 
         brainGroup.add(instancedMesh);
-        console.log("Surface voxels rendered");
+        console.log("Surface voxels rendered with wireframe");
       }
 
       // Initialize and start animation
