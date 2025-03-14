@@ -108,8 +108,11 @@
 
         // Add event listeners to detect user interaction with controls
         controls.addEventListener("start", function () {
-          userInteracted = true;
-          updateRotationButton();
+          if (autoRotate) {
+            userInteracted = true;
+            autoRotate = false;
+            updateRotationButton();
+          }
         });
 
         // Enhanced lighting setup for better gyri visibility
@@ -147,6 +150,9 @@
         const toggleButton = document.getElementById("rotation-toggle");
         toggleButton.addEventListener("click", function () {
           autoRotate = !autoRotate;
+          if (autoRotate) {
+            userInteracted = false; // Reset interaction flag when manually starting rotation
+          }
           updateRotationButton();
         });
       }
@@ -173,7 +179,7 @@
         requestAnimationFrame(animate);
 
         // Apply auto-rotation if enabled and user hasn't interacted
-        if (autoRotate && !userInteracted && brainGroup) {
+        if (autoRotate && brainGroup) {
           // Rotate around the vertical axis (y-axis) for horizontal side-to-side spin
           // Note: Since we've rotated the brain group with brainGroup.rotation.x = -Math.PI / 2,
           // we need to rotate around the z-axis to get a horizontal spin
