@@ -99,10 +99,13 @@
       let isBrainSplit = false; // Track if brain is split
       let brainVoxels = []; // Store brain voxel data
       let dlpfcVoxels = []; // Store DLPFC voxel data
+      let brocaVoxels = []; // Store Broca's area voxel data
       let brainShape = []; // Store brain dimensions
       let dlpfcShape = []; // Store DLPFC dimensions
+      let brocaShape = []; // Store Broca's area dimensions
       let brainInstancedMesh; // Reference to brain instanced mesh
       let dlpfcInstancedMesh; // Reference to DLPFC instanced mesh
+      let brocaInstancedMesh; // Reference to Broca's area instanced mesh
       let brainEdges; // Reference to brain edges
 
       // Initialize the scene
@@ -298,6 +301,31 @@
             dlpfcInfo.innerHTML = `DLPFC voxels: <span style="color:#00aa00">${dlpfcData.voxels.length}</span>`;
             infoDiv.appendChild(dlpfcInfo);
 
+            // Now load the Broca's area atlas
+            return fetch("broca_atlas_voxels.json");
+          })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(
+                "Network response was not ok for Broca's area data"
+              );
+            }
+            return response.json();
+          })
+          .then((brocaData) => {
+            // Store Broca's area data
+            brocaVoxels = brocaData.voxels;
+            brocaShape = brocaData.shape;
+
+            // Add Broca's area voxels to the visualization
+            addBrocaVoxels(brocaVoxels, brocaShape);
+
+            // Update info panel with Broca's area count
+            const infoDiv = document.getElementById("info");
+            const brocaInfo = document.createElement("p");
+            brocaInfo.innerHTML = `Broca's area voxels: <span style="color:#0055aa">${brocaData.voxels.length}</span>`;
+            infoDiv.appendChild(brocaInfo);
+
             // Hide loading message
             document.getElementById("loading").style.display = "none";
           })
@@ -450,6 +478,7 @@
           <p><strong>Legend:</strong></p>
           <p><span class="color-box" style="background-color:#888888"></span> Whole Brain Surface</p>
           <p><span class="color-box" style="background-color:#00aa00"></span> DLPFC Region</p>
+          <p><span class="color-box" style="background-color:#0055aa"></span> Broca's Area</p>
         `;
         infoDiv.appendChild(legend);
 
@@ -667,11 +696,71 @@
         console.log("DLPFC voxels added in green color");
       }
 
+      // Add Broca's area voxels to the visualization
+      function addBrocaVoxels(voxels, shape) {
+        console.log(`Adding ${voxels.length} Broca's area voxels...`);
+
+        // Calculate center offset to match the main brain
+        const centerOffset = [-shape[0] / 2, -shape[1] / 2, -shape[2] / 2];
+
+        // Filter voxels based on split brain state
+        const filteredVoxels = isBrainSplit
+          ? voxels.filter((voxel) => voxel[0] <= shape[0] / 2)
+          : voxels;
+
+        // Create a box for each voxel
+        const boxSize = 0.92; // Same size as main brain voxels
+        const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+
+        // Create a blue material for Broca's area voxels
+        const material = new THREE.MeshStandardMaterial({
+          color: 0x0055aa, // Blue color
+          roughness: 0.6,
+          metalness: 0.2,
+          transparent: false,
+          side: THREE.FrontSide,
+          flatShading: true,
+          emissive: 0x000033, // Slight emissive glow to make it stand out
+          emissiveIntensity: 0.3,
+        });
+
+        // Use instanced mesh for better performance
+        brocaInstancedMesh = new THREE.InstancedMesh(
+          boxGeometry,
+          material,
+          filteredVoxels.length
+        );
+
+        // Set matrix for each instance
+        const matrix = new THREE.Matrix4();
+        for (let i = 0; i < filteredVoxels.length; i++) {
+          const voxel = filteredVoxels[i];
+          const [x, y, z] = voxel;
+
+          matrix.setPosition(
+            x + centerOffset[0],
+            y + centerOffset[1],
+            z + centerOffset[2]
+          );
+
+          brocaInstancedMesh.setMatrixAt(i, matrix);
+        }
+
+        // Update instance matrix
+        brocaInstancedMesh.instanceMatrix.needsUpdate = true;
+
+        // Add the Broca's area voxels to the brain group
+        brainGroup.add(brocaInstancedMesh);
+
+        console.log("Broca's area voxels added in blue color");
+      }
+
       // Update brain visualization based on split state
       function updateBrainVisualization() {
         // Remove existing meshes
         if (brainInstancedMesh) brainGroup.remove(brainInstancedMesh);
         if (dlpfcInstancedMesh) brainGroup.remove(dlpfcInstancedMesh);
+        if (brocaInstancedMesh) brainGroup.remove(brocaInstancedMesh);
         if (brainEdges) brainGroup.remove(brainEdges);
 
         // Calculate center offset
@@ -687,6 +776,11 @@
         // Recreate DLPFC voxels with filtered data
         if (dlpfcVoxels.length > 0) {
           addDLPFCVoxels(dlpfcVoxels, dlpfcShape);
+        }
+
+        // Recreate Broca's area voxels with filtered data
+        if (brocaVoxels.length > 0) {
+          addBrocaVoxels(brocaVoxels, brocaShape);
         }
 
         console.log(`Brain visualization updated. Split mode: ${isBrainSplit}`);
