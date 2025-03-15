@@ -73,6 +73,46 @@
       #split-brain-toggle:hover {
         background-color: rgba(240, 240, 240, 0.9);
       }
+      /* New styles for area controls */
+      #area-controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+        max-width: 300px;
+        max-height: 80vh;
+        overflow-y: auto;
+        font-family: Arial, sans-serif;
+      }
+      #area-search {
+        width: 100%;
+        padding: 5px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+      }
+      .area-item {
+        margin: 5px 0;
+        display: flex;
+        align-items: center;
+      }
+      .area-checkbox {
+        margin-right: 8px;
+      }
+      .area-color {
+        width: 15px;
+        height: 15px;
+        display: inline-block;
+        margin-right: 8px;
+        border: 1px solid #666;
+      }
+      .no-areas-found {
+        color: #666;
+        font-style: italic;
+        margin-top: 10px;
+      }
     </style>
   </head>
   <body>
@@ -89,6 +129,15 @@
     <button id="rotation-toggle">Stop Rotation</button>
     <button id="split-brain-toggle">Split Brain</button>
 
+    <!-- New area controls panel -->
+    <div id="area-controls">
+      <h3>Brain Areas</h3>
+      <input type="text" id="area-search" placeholder="Search areas..." />
+      <div id="area-list">
+        <!-- Area checkboxes will be added here dynamically -->
+      </div>
+    </div>
+
     <script>
       // Main Three.js variables
       let scene, camera, renderer, controls;
@@ -98,15 +147,28 @@
       let userInteracted = false; // Track if user has interacted with controls
       let isBrainSplit = false; // Track if brain is split
       let brainVoxels = []; // Store brain voxel data
-      let dlpfcVoxels = []; // Store DLPFC voxel data
-      let brocaVoxels = []; // Store Broca's area voxel data
       let brainShape = []; // Store brain dimensions
-      let dlpfcShape = []; // Store DLPFC dimensions
-      let brocaShape = []; // Store Broca's area dimensions
       let brainInstancedMesh; // Reference to brain instanced mesh
-      let dlpfcInstancedMesh; // Reference to DLPFC instanced mesh
-      let brocaInstancedMesh; // Reference to Broca's area instanced mesh
       let brainEdges; // Reference to brain edges
+
+      // New variables for general area handling
+      let availableAreas = []; // List of available areas
+      let activeAreas = {}; // Map of active areas and their meshes
+      let areaColors = {}; // Map of area colors
+
+      // Color palette for different areas
+      const colorPalette = [
+        0x00aa00, // Green
+        0x0055aa, // Blue
+        0xaa0000, // Red
+        0xaa00aa, // Purple
+        0xaaaa00, // Yellow
+        0x00aaaa, // Cyan
+        0xff5500, // Orange
+        0x5500ff, // Indigo
+        0xff0055, // Pink
+        0x55ff00, // Lime
+      ];
 
       // Initialize the scene
       function init() {
@@ -181,8 +243,14 @@
         // Set up split brain toggle button
         setupSplitBrainToggle();
 
+        // Set up area search functionality
+        setupAreaSearch();
+
         // Load and visualize voxels
         loadVoxels();
+
+        // Load available areas
+        loadAvailableAreas();
       }
 
       // Set up rotation toggle button
@@ -278,6 +346,10 @@
             // Create brain volume visualization with only surface voxels
             createBrainVolume(brainVoxels, shape);
 
+            // Hide loading message
+            document.getElementById("loading").style.display = "none";
+
+            /* Comment out specific area loading
             // Now load the DLPFC atlas
             return fetch("dlpfc_atlas_voxels.json");
           })
@@ -328,6 +400,7 @@
 
             // Hide loading message
             document.getElementById("loading").style.display = "none";
+            */
           })
           .catch((error) => {
             console.error("Error loading voxel data:", error);
@@ -477,8 +550,6 @@
         legend.innerHTML = `
           <p><strong>Legend:</strong></p>
           <p><span class="color-box" style="background-color:#888888"></span> Whole Brain Surface</p>
-          <p><span class="color-box" style="background-color:#00aa00"></span> DLPFC Region</p>
-          <p><span class="color-box" style="background-color:#0055aa"></span> Broca's Area</p>
         `;
         infoDiv.appendChild(legend);
 
@@ -637,131 +708,18 @@
         console.log("Added simplified edges to selected voxels");
       }
 
-      // Add DLPFC voxels to the visualization
-      function addDLPFCVoxels(voxels, shape) {
-        console.log(`Adding ${voxels.length} DLPFC voxels...`);
-
-        // Calculate center offset to match the main brain
-        const centerOffset = [-shape[0] / 2, -shape[1] / 2, -shape[2] / 2];
-
-        // Filter voxels based on split brain state
-        const filteredVoxels = isBrainSplit
-          ? voxels.filter((voxel) => voxel[0] <= shape[0] / 2)
-          : voxels;
-
-        // Create a box for each voxel
-        const boxSize = 0.92; // Same size as main brain voxels
-        const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-
-        // Create a green material for DLPFC voxels
-        const material = new THREE.MeshStandardMaterial({
-          color: 0x00aa00, // Green color
-          roughness: 0.6,
-          metalness: 0.2,
-          transparent: false,
-          side: THREE.FrontSide,
-          flatShading: true,
-          emissive: 0x003300, // Slight emissive glow to make it stand out
-          emissiveIntensity: 0.3,
-        });
-
-        // Use instanced mesh for better performance
-        dlpfcInstancedMesh = new THREE.InstancedMesh(
-          boxGeometry,
-          material,
-          filteredVoxels.length
-        );
-
-        // Set matrix for each instance
-        const matrix = new THREE.Matrix4();
-        for (let i = 0; i < filteredVoxels.length; i++) {
-          const voxel = filteredVoxels[i];
-          const [x, y, z] = voxel;
-
-          matrix.setPosition(
-            x + centerOffset[0],
-            y + centerOffset[1],
-            z + centerOffset[2]
-          );
-
-          dlpfcInstancedMesh.setMatrixAt(i, matrix);
-        }
-
-        // Update instance matrix
-        dlpfcInstancedMesh.instanceMatrix.needsUpdate = true;
-
-        // Add the DLPFC voxels to the brain group
-        brainGroup.add(dlpfcInstancedMesh);
-
-        console.log("DLPFC voxels added in green color");
-      }
-
-      // Add Broca's area voxels to the visualization
-      function addBrocaVoxels(voxels, shape) {
-        console.log(`Adding ${voxels.length} Broca's area voxels...`);
-
-        // Calculate center offset to match the main brain
-        const centerOffset = [-shape[0] / 2, -shape[1] / 2, -shape[2] / 2];
-
-        // Filter voxels based on split brain state
-        const filteredVoxels = isBrainSplit
-          ? voxels.filter((voxel) => voxel[0] <= shape[0] / 2)
-          : voxels;
-
-        // Create a box for each voxel
-        const boxSize = 0.92; // Same size as main brain voxels
-        const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-
-        // Create a blue material for Broca's area voxels
-        const material = new THREE.MeshStandardMaterial({
-          color: 0x0055aa, // Blue color
-          roughness: 0.6,
-          metalness: 0.2,
-          transparent: false,
-          side: THREE.FrontSide,
-          flatShading: true,
-          emissive: 0x000033, // Slight emissive glow to make it stand out
-          emissiveIntensity: 0.3,
-        });
-
-        // Use instanced mesh for better performance
-        brocaInstancedMesh = new THREE.InstancedMesh(
-          boxGeometry,
-          material,
-          filteredVoxels.length
-        );
-
-        // Set matrix for each instance
-        const matrix = new THREE.Matrix4();
-        for (let i = 0; i < filteredVoxels.length; i++) {
-          const voxel = filteredVoxels[i];
-          const [x, y, z] = voxel;
-
-          matrix.setPosition(
-            x + centerOffset[0],
-            y + centerOffset[1],
-            z + centerOffset[2]
-          );
-
-          brocaInstancedMesh.setMatrixAt(i, matrix);
-        }
-
-        // Update instance matrix
-        brocaInstancedMesh.instanceMatrix.needsUpdate = true;
-
-        // Add the Broca's area voxels to the brain group
-        brainGroup.add(brocaInstancedMesh);
-
-        console.log("Broca's area voxels added in blue color");
-      }
-
       // Update brain visualization based on split state
       function updateBrainVisualization() {
         // Remove existing meshes
         if (brainInstancedMesh) brainGroup.remove(brainInstancedMesh);
-        if (dlpfcInstancedMesh) brainGroup.remove(dlpfcInstancedMesh);
-        if (brocaInstancedMesh) brainGroup.remove(brocaInstancedMesh);
         if (brainEdges) brainGroup.remove(brainEdges);
+
+        // Remove all active area meshes
+        for (const areaName in activeAreas) {
+          if (activeAreas[areaName].mesh) {
+            brainGroup.remove(activeAreas[areaName].mesh);
+          }
+        }
 
         // Calculate center offset
         const centerOffset = [
@@ -773,17 +731,307 @@
         // Recreate brain voxels with filtered data
         createBrainVoxels(brainVoxels, brainShape, centerOffset, brainGroup);
 
-        // Recreate DLPFC voxels with filtered data
-        if (dlpfcVoxels.length > 0) {
-          addDLPFCVoxels(dlpfcVoxels, dlpfcShape);
-        }
-
-        // Recreate Broca's area voxels with filtered data
-        if (brocaVoxels.length > 0) {
-          addBrocaVoxels(brocaVoxels, brocaShape);
+        // Recreate all active areas
+        for (const areaName in activeAreas) {
+          if (activeAreas[areaName].active) {
+            addAreaVoxels(
+              areaName,
+              activeAreas[areaName].voxels,
+              activeAreas[areaName].shape,
+              areaColors[areaName]
+            );
+          }
         }
 
         console.log(`Brain visualization updated. Split mode: ${isBrainSplit}`);
+      }
+
+      // New function to load available areas
+      function loadAvailableAreas() {
+        // Fetch the list of available area JSON files
+        fetch("areas_index.json")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Could not load areas index");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            availableAreas = data.areas;
+
+            // Initialize area colors
+            availableAreas.forEach((area, index) => {
+              // Assign a color from the palette, cycling if needed
+              areaColors[area.name] = colorPalette[index % colorPalette.length];
+            });
+
+            // Populate the area list
+            updateAreaList();
+          })
+          .catch((error) => {
+            console.error("Error loading areas index:", error);
+
+            // If areas_index.json doesn't exist, create a fallback with known areas
+            console.log("Using fallback area list");
+            availableAreas = [
+              {
+                name: "dlpfc",
+                file: "dlpfc_atlas_voxels.json",
+                description: "Dorsolateral Prefrontal Cortex",
+              },
+              {
+                name: "broca",
+                file: "broca_atlas_voxels.json",
+                description: "Broca's Area",
+              },
+            ];
+
+            // Initialize area colors for fallback
+            availableAreas.forEach((area, index) => {
+              areaColors[area.name] = colorPalette[index % colorPalette.length];
+            });
+
+            // Populate the area list with fallback data
+            updateAreaList();
+          });
+      }
+
+      // Function to update the area list in the UI
+      function updateAreaList(searchTerm = "") {
+        const areaList = document.getElementById("area-list");
+        areaList.innerHTML = ""; // Clear existing list
+
+        // Filter areas based on search term
+        const filteredAreas = searchTerm
+          ? availableAreas.filter(
+              (area) =>
+                area.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (area.description &&
+                  area.description
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase()))
+            )
+          : availableAreas;
+
+        if (filteredAreas.length === 0) {
+          areaList.innerHTML =
+            '<div class="no-areas-found">No areas found matching your search</div>';
+          return;
+        }
+
+        // Create checkbox for each area
+        filteredAreas.forEach((area) => {
+          const areaItem = document.createElement("div");
+          areaItem.className = "area-item";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.className = "area-checkbox";
+          checkbox.id = `area-${area.name}`;
+          checkbox.checked = activeAreas[area.name]?.active || false;
+          checkbox.addEventListener("change", () => toggleArea(area));
+
+          const colorBox = document.createElement("span");
+          colorBox.className = "area-color";
+          colorBox.style.backgroundColor = `#${areaColors[area.name]
+            .toString(16)
+            .padStart(6, "0")}`;
+
+          const label = document.createElement("label");
+          label.htmlFor = `area-${area.name}`;
+          label.textContent = area.description || area.name;
+
+          areaItem.appendChild(checkbox);
+          areaItem.appendChild(colorBox);
+          areaItem.appendChild(label);
+          areaList.appendChild(areaItem);
+        });
+      }
+
+      // Function to set up area search
+      function setupAreaSearch() {
+        const searchInput = document.getElementById("area-search");
+        searchInput.addEventListener("input", (e) => {
+          updateAreaList(e.target.value);
+        });
+      }
+
+      // Function to toggle an area on/off
+      function toggleArea(area) {
+        const checkbox = document.getElementById(`area-${area.name}`);
+        const isActive = checkbox.checked;
+
+        if (
+          isActive &&
+          (!activeAreas[area.name] || !activeAreas[area.name].voxels)
+        ) {
+          // Area is being activated and we don't have the data yet
+          loadAreaData(area);
+        } else if (activeAreas[area.name]) {
+          // We already have the data, just toggle visibility
+          activeAreas[area.name].active = isActive;
+
+          if (isActive) {
+            // Add the area to visualization
+            addAreaVoxels(
+              area.name,
+              activeAreas[area.name].voxels,
+              activeAreas[area.name].shape,
+              areaColors[area.name]
+            );
+          } else {
+            // Remove the area from visualization
+            if (activeAreas[area.name].mesh) {
+              brainGroup.remove(activeAreas[area.name].mesh);
+              activeAreas[area.name].mesh = null;
+            }
+          }
+
+          // Update the legend
+          updateLegend();
+        }
+      }
+
+      // Function to load area data
+      function loadAreaData(area) {
+        console.log(`Loading data for ${area.name}...`);
+
+        // Show loading indicator
+        const loadingDiv = document.getElementById("loading");
+        loadingDiv.textContent = `Loading ${area.description || area.name}...`;
+        loadingDiv.style.display = "block";
+
+        fetch(area.file)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`Could not load data for ${area.name}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Store the area data
+            activeAreas[area.name] = {
+              active: true,
+              voxels: data.voxels,
+              shape: data.shape,
+              mesh: null,
+            };
+
+            // Add the area to visualization
+            addAreaVoxels(
+              area.name,
+              data.voxels,
+              data.shape,
+              areaColors[area.name]
+            );
+
+            // Update the legend
+            updateLegend();
+
+            // Hide loading indicator
+            loadingDiv.style.display = "none";
+          })
+          .catch((error) => {
+            console.error(`Error loading ${area.name} data:`, error);
+
+            // Uncheck the checkbox
+            const checkbox = document.getElementById(`area-${area.name}`);
+            checkbox.checked = false;
+
+            // Show error message
+            loadingDiv.textContent = `Error loading ${
+              area.description || area.name
+            }. Check console for details.`;
+            setTimeout(() => {
+              loadingDiv.style.display = "none";
+            }, 3000);
+          });
+      }
+
+      // Function to add area voxels to the visualization
+      function addAreaVoxels(areaName, voxels, shape, color) {
+        console.log(`Adding ${voxels.length} voxels for ${areaName}...`);
+
+        // Calculate center offset to match the main brain
+        const centerOffset = [-shape[0] / 2, -shape[1] / 2, -shape[2] / 2];
+
+        // Filter voxels based on split brain state
+        const filteredVoxels = isBrainSplit
+          ? voxels.filter((voxel) => voxel[0] <= shape[0] / 2)
+          : voxels;
+
+        // Create a box for each voxel
+        const boxSize = 0.92; // Same size as main brain voxels
+        const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+
+        // Create a material for the area voxels
+        const material = new THREE.MeshStandardMaterial({
+          color: color,
+          roughness: 0.6,
+          metalness: 0.2,
+          transparent: false,
+          side: THREE.FrontSide,
+          flatShading: true,
+          emissive: new THREE.Color(color).multiplyScalar(0.3), // Slight emissive glow
+          emissiveIntensity: 0.3,
+        });
+
+        // Use instanced mesh for better performance
+        const instancedMesh = new THREE.InstancedMesh(
+          boxGeometry,
+          material,
+          filteredVoxels.length
+        );
+
+        // Set matrix for each instance
+        const matrix = new THREE.Matrix4();
+        for (let i = 0; i < filteredVoxels.length; i++) {
+          const voxel = filteredVoxels[i];
+          const [x, y, z] = voxel;
+
+          matrix.setPosition(
+            x + centerOffset[0],
+            y + centerOffset[1],
+            z + centerOffset[2]
+          );
+
+          instancedMesh.setMatrixAt(i, matrix);
+        }
+
+        // Update instance matrix
+        instancedMesh.instanceMatrix.needsUpdate = true;
+
+        // Add the area voxels to the brain group
+        brainGroup.add(instancedMesh);
+
+        // Store reference to the mesh
+        activeAreas[areaName].mesh = instancedMesh;
+
+        console.log(`${areaName} voxels added with custom color`);
+      }
+
+      // Function to update the legend based on active areas
+      function updateLegend() {
+        const legend = document.querySelector(".legend");
+        legend.innerHTML = `
+          <p><strong>Legend:</strong></p>
+          <p><span class="color-box" style="background-color:#888888"></span> Whole Brain Surface</p>
+        `;
+
+        // Add active areas to legend
+        for (const areaName in activeAreas) {
+          if (activeAreas[areaName].active) {
+            const area = availableAreas.find((a) => a.name === areaName);
+            const description = area ? area.description || areaName : areaName;
+            const colorHex = `#${areaColors[areaName]
+              .toString(16)
+              .padStart(6, "0")}`;
+
+            legend.innerHTML += `
+              <p><span class="color-box" style="background-color:${colorHex}"></span> ${description}</p>
+            `;
+          }
+        }
       }
 
       // Initialize and start animation
