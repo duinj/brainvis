@@ -748,16 +748,24 @@
 
       // New function to load available areas
       function loadAvailableAreas() {
-        // Fetch the list of available area JSON files
-        fetch("areas_index.json")
+        // Fetch the list of available area JSON files from index.json
+        fetch("index.json")
           .then((response) => {
             if (!response.ok) {
-              throw new Error("Could not load areas index");
+              throw new Error("Could not load index.json");
             }
             return response.json();
           })
           .then((data) => {
-            availableAreas = data.areas;
+            // Convert the areas from index.json format to our application format
+            availableAreas = data.areas.map((area, index) => {
+              return {
+                name: area.name,
+                file: `brodmann_areas/${area.voxel_filename}`,
+                description: area.name,
+                index: area.index,
+              };
+            });
 
             // Initialize area colors
             availableAreas.forEach((area, index) => {
@@ -769,9 +777,9 @@
             updateAreaList();
           })
           .catch((error) => {
-            console.error("Error loading areas index:", error);
+            console.error("Error loading index.json:", error);
 
-            // If areas_index.json doesn't exist, create a fallback with known areas
+            // If index.json doesn't exist or has issues, create a fallback with known areas
             console.log("Using fallback area list");
             availableAreas = [
               {
