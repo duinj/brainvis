@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Brain Voxel Visualization</title>
+    <title>3D Brain MNI Coordinate Visualization</title>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
     <style>
@@ -117,15 +117,15 @@
   </head>
   <body>
     <div id="info">
-      <h2>3D Brain Voxel Visualization</h2>
-      <p>Loading voxels: <span id="voxel-count">0</span></p>
+      <h2>3D Brain MNI Coordinate Visualization</h2>
+      <p>Loading coordinates: <span id="coordinate-count">0</span></p>
       <p>Brain dimensions: <span id="dimensions">Loading...</span></p>
       <p>
         Controls: Left-click + drag to rotate, scroll to zoom, right-click +
         drag to pan
       </p>
     </div>
-    <div id="loading">Loading brain voxels...</div>
+    <div id="loading">Loading brain MNI coordinates...</div>
     <button id="rotation-toggle">Stop Rotation</button>
     <button id="split-brain-toggle">Split Brain</button>
 
@@ -141,12 +141,12 @@
     <script>
       // Main Three.js variables
       let scene, camera, renderer, controls;
-      let voxelCount = 0;
+      let coordinateCount = 0;
       let brainGroup; // Store reference to the brain group for rotation
       let autoRotate = true; // Auto-rotation state
       let userInteracted = false; // Track if user has interacted with controls
       let isBrainSplit = false; // Track if brain is split
-      let brainVoxels = []; // Store brain voxel data
+      let brainCoordinates = []; // Store brain coordinate data (MNI)
       let brainShape = []; // Store brain dimensions
       let brainInstancedMesh; // Reference to brain instanced mesh
       let brainEdges; // Reference to brain edges
@@ -246,8 +246,8 @@
         // Set up area search functionality
         setupAreaSearch();
 
-        // Load and visualize voxels
-        loadVoxels();
+        // Load and visualize coordinates
+        loadCoordinates();
 
         // Load available areas
         loadAvailableAreas();
@@ -318,10 +318,10 @@
         renderer.render(scene, camera);
       }
 
-      // Load voxels from JSON files
-      function loadVoxels() {
-        // First load the whole brain atlas
-        fetch("whole_brain_atlas_voxels.json")
+      // Load coordinates from JSON files
+      function loadCoordinates() {
+        // First load the whole brain atlas with MNI coordinates
+        fetch("whole_brain_mni_coordinates.json")
           .then((response) => {
             if (!response.ok) {
               throw new Error(
@@ -331,8 +331,61 @@
             return response.json();
           })
           .then((data) => {
-            const voxels = data.voxels;
-            const shape = data.shape;
+            console.log("Loaded brain data:", data);
+
+            // Check if coordinates exist in the data
+            if (
+              !data.coordinates ||
+              !Array.isArray(data.coordinates) ||
+              data.coordinates.length === 0
+            ) {
+              throw new Error(
+                "No coordinates found in the data or coordinates is not an array"
+              );
+            }
+
+            const coordinates = data.coordinates; // Use coordinates instead of voxels
+
+            // Log the first few coordinates to verify format
+            console.log("First 5 coordinates:", coordinates.slice(0, 5));
+
+            // Check if shape exists, if not, calculate it from coordinates
+            let shape;
+            if (data.shape) {
+              shape = data.shape;
+            } else {
+              // For MNI coordinates, we need to calculate the bounding box
+              let minX = Infinity,
+                minY = Infinity,
+                minZ = Infinity;
+              let maxX = -Infinity,
+                maxY = -Infinity,
+                maxZ = -Infinity;
+
+              for (const coord of coordinates) {
+                if (!Array.isArray(coord) || coord.length !== 3) {
+                  console.error("Invalid coordinate format:", coord);
+                  continue;
+                }
+
+                const [x, y, z] = coord;
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                minZ = Math.min(minZ, z);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+                maxZ = Math.max(maxZ, z);
+              }
+
+              shape = [
+                Math.ceil(maxX - minX),
+                Math.ceil(maxY - minY),
+                Math.ceil(maxZ - minZ),
+              ];
+
+              console.log("Calculated shape from coordinates:", shape);
+            }
+
             brainShape = shape; // Store brain shape
 
             // Update info panel
@@ -340,105 +393,84 @@
               "dimensions"
             ).textContent = `${shape[0]} × ${shape[1]} × ${shape[2]}`;
 
-            // Filter to get only surface voxels
-            brainVoxels = filterSurfaceVoxels(voxels, shape); // Store brain voxels
+            // Filter to get only surface coordinates
+            try {
+              brainCoordinates = filterSurfaceCoordinates(coordinates, shape); // Store brain coordinates
 
-            // Create brain volume visualization with only surface voxels
-            createBrainVolume(brainVoxels, shape);
+              // Create brain volume visualization with only surface coordinates
+              createBrainVolume(brainCoordinates, shape);
 
-            // Hide loading message
-            document.getElementById("loading").style.display = "none";
-
-            /* Comment out specific area loading
-            // Now load the DLPFC atlas
-            return fetch("dlpfc_atlas_voxels.json");
-          })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not ok for DLPFC data");
+              // Hide loading message
+              document.getElementById("loading").style.display = "none";
+            } catch (error) {
+              console.error("Error processing coordinates:", error);
+              document.getElementById("loading").textContent =
+                "Error processing coordinates: " + error.message;
             }
-            return response.json();
-          })
-          .then((dlpfcData) => {
-            // Store DLPFC data
-            dlpfcVoxels = dlpfcData.voxels;
-            dlpfcShape = dlpfcData.shape;
-
-            // Add DLPFC voxels to the visualization
-            addDLPFCVoxels(dlpfcVoxels, dlpfcShape);
-
-            // Update info panel with DLPFC count
-            const infoDiv = document.getElementById("info");
-            const dlpfcInfo = document.createElement("p");
-            dlpfcInfo.innerHTML = `DLPFC voxels: <span style="color:#00aa00">${dlpfcData.voxels.length}</span>`;
-            infoDiv.appendChild(dlpfcInfo);
-
-            // Now load the Broca's area atlas
-            return fetch("broca_atlas_voxels.json");
-          })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(
-                "Network response was not ok for Broca's area data"
-              );
-            }
-            return response.json();
-          })
-          .then((brocaData) => {
-            // Store Broca's area data
-            brocaVoxels = brocaData.voxels;
-            brocaShape = brocaData.shape;
-
-            // Add Broca's area voxels to the visualization
-            addBrocaVoxels(brocaVoxels, brocaShape);
-
-            // Update info panel with Broca's area count
-            const infoDiv = document.getElementById("info");
-            const brocaInfo = document.createElement("p");
-            brocaInfo.innerHTML = `Broca's area voxels: <span style="color:#0055aa">${brocaData.voxels.length}</span>`;
-            infoDiv.appendChild(brocaInfo);
-
-            // Hide loading message
-            document.getElementById("loading").style.display = "none";
-            */
           })
           .catch((error) => {
-            console.error("Error loading voxel data:", error);
+            console.error("Error loading coordinate data:", error);
             document.getElementById("loading").textContent =
-              "Error loading voxel data. Check console for details.";
+              "Error loading coordinate data: " + error.message;
           });
       }
 
-      // Filter to get only surface voxels
-      function filterSurfaceVoxels(voxels, shape) {
-        console.log("Filtering surface voxels...");
+      // Filter to get only surface coordinates
+      function filterSurfaceCoordinates(coordinates, shape) {
+        console.log("Filtering surface coordinates...");
 
-        // Create a 3D array to represent the brain volume
-        const volume = Array(shape[0])
-          .fill()
-          .map(() =>
-            Array(shape[1])
-              .fill()
-              .map(() => Array(shape[2]).fill(false))
-          );
-
-        // Fill the volume with the voxels
-        for (const voxel of voxels) {
-          const [x, y, z] = voxel;
-          if (
-            x >= 0 &&
-            x < shape[0] &&
-            y >= 0 &&
-            y < shape[1] &&
-            z >= 0 &&
-            z < shape[2]
-          ) {
-            volume[x][y][z] = true;
-          }
+        // Validate input
+        if (
+          !coordinates ||
+          !Array.isArray(coordinates) ||
+          coordinates.length === 0
+        ) {
+          throw new Error("Invalid coordinates array");
         }
 
-        // Find surface voxels (those with at least one empty neighbor)
-        const surfaceVoxels = [];
+        // For MNI coordinates, we need to create a spatial hash instead of a 3D array
+        // since coordinates can be negative and are floating point values
+        const spatialHash = new Map();
+        const resolution = 1.0; // Resolution for spatial hashing (1mm)
+
+        // Function to get hash key for a coordinate
+        function getHashKey(x, y, z) {
+          // Round to nearest resolution unit to handle floating point
+          const rx = Math.round(x / resolution);
+          const ry = Math.round(y / resolution);
+          const rz = Math.round(z / resolution);
+          return `${rx},${ry},${rz}`;
+        }
+
+        // Add all coordinates to the spatial hash
+        for (const coord of coordinates) {
+          if (!Array.isArray(coord) || coord.length !== 3) {
+            console.warn("Skipping invalid coordinate:", coord);
+            continue;
+          }
+
+          const [x, y, z] = coord;
+          if (
+            typeof x !== "number" ||
+            typeof y !== "number" ||
+            typeof z !== "number" ||
+            isNaN(x) ||
+            isNaN(y) ||
+            isNaN(z)
+          ) {
+            console.warn("Skipping coordinate with non-numeric values:", coord);
+            continue;
+          }
+
+          spatialHash.set(getHashKey(x, y, z), true);
+        }
+
+        if (spatialHash.size === 0) {
+          throw new Error("No valid coordinates found");
+        }
+
+        // Find surface coordinates (those with at least one empty neighbor)
+        const surfaceCoordinates = [];
         const directions = [
           [1, 0, 0],
           [-1, 0, 0],
@@ -448,128 +480,233 @@
           [0, 0, -1],
         ];
 
-        for (const voxel of voxels) {
-          const [x, y, z] = voxel;
+        for (const coord of coordinates) {
+          if (!Array.isArray(coord) || coord.length !== 3) {
+            continue; // Skip invalid coordinates
+          }
 
-          // Check if this voxel is on the surface
+          const [x, y, z] = coord;
+          if (
+            typeof x !== "number" ||
+            typeof y !== "number" ||
+            typeof z !== "number" ||
+            isNaN(x) ||
+            isNaN(y) ||
+            isNaN(z)
+          ) {
+            continue; // Skip coordinates with non-numeric values
+          }
+
+          // Check if this coordinate is on the surface
           let isSurface = false;
 
-          // If it's on the edge of the volume, it's definitely a surface voxel
-          if (
-            x === 0 ||
-            x === shape[0] - 1 ||
-            y === 0 ||
-            y === shape[1] - 1 ||
-            z === 0 ||
-            z === shape[2] - 1
-          ) {
-            isSurface = true;
-          } else {
-            // Check all 6 neighbors
-            for (const [dx, dy, dz] of directions) {
-              const nx = x + dx;
-              const ny = y + dy;
-              const nz = z + dz;
+          // Check all 6 neighbors
+          for (const [dx, dy, dz] of directions) {
+            const nx = x + dx * resolution;
+            const ny = y + dy * resolution;
+            const nz = z + dz * resolution;
 
-              // If neighbor is out of bounds or empty, this is a surface voxel
-              if (
-                nx < 0 ||
-                nx >= shape[0] ||
-                ny < 0 ||
-                ny >= shape[1] ||
-                nz < 0 ||
-                nz >= shape[2] ||
-                !volume[nx][ny][nz]
-              ) {
-                isSurface = true;
-                break;
-              }
+            // If neighbor is not in the hash, this is a surface coordinate
+            if (!spatialHash.has(getHashKey(nx, ny, nz))) {
+              isSurface = true;
+              break;
             }
           }
 
           if (isSurface) {
-            surfaceVoxels.push(voxel);
+            surfaceCoordinates.push(coord);
           }
         }
 
+        if (surfaceCoordinates.length === 0) {
+          throw new Error("No surface coordinates found");
+        }
+
         console.log(
-          `Found ${surfaceVoxels.length} surface voxels out of ${
-            voxels.length
-          } total voxels (${Math.round(
-            (surfaceVoxels.length / voxels.length) * 100
+          `Found ${surfaceCoordinates.length} surface coordinates out of ${
+            coordinates.length
+          } total coordinates (${Math.round(
+            (surfaceCoordinates.length / coordinates.length) * 100
           )}%)`
         );
 
-        return surfaceVoxels;
+        return surfaceCoordinates;
       }
 
       // Create brain volume visualization
-      function createBrainVolume(voxels, shape) {
+      function createBrainVolume(coordinates, shape) {
+        console.log("Creating brain volume visualization...");
+
+        // Validate input
+        if (
+          !coordinates ||
+          !Array.isArray(coordinates) ||
+          coordinates.length === 0
+        ) {
+          throw new Error("Invalid coordinates array");
+        }
+
         // Create a group to hold all elements
         brainGroup = new THREE.Group(); // Store reference for rotation
 
-        // Calculate center offset to center the brain
-        const centerOffset = [-shape[0] / 2, -shape[1] / 2, -shape[2] / 2];
+        // For MNI coordinates, we need to calculate the bounding box
+        let minX = Infinity,
+          minY = Infinity,
+          minZ = Infinity;
+        let maxX = -Infinity,
+          maxY = -Infinity,
+          maxZ = -Infinity;
+
+        // Validate coordinates and calculate bounds
+        let validCoordinates = [];
+        for (const coord of coordinates) {
+          if (!Array.isArray(coord) || coord.length !== 3) {
+            console.warn("Skipping invalid coordinate:", coord);
+            continue;
+          }
+
+          const [x, y, z] = coord;
+          if (
+            typeof x !== "number" ||
+            typeof y !== "number" ||
+            typeof z !== "number" ||
+            isNaN(x) ||
+            isNaN(y) ||
+            isNaN(z)
+          ) {
+            console.warn("Skipping coordinate with non-numeric values:", coord);
+            continue;
+          }
+
+          validCoordinates.push(coord);
+
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          minZ = Math.min(minZ, z);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+          maxZ = Math.max(maxZ, z);
+        }
+
+        if (validCoordinates.length === 0) {
+          throw new Error("No valid coordinates found");
+        }
+
+        // Use validated coordinates
+        coordinates = validCoordinates;
+
+        // Calculate dimensions and center
+        const dimensions = [maxX - minX, maxY - minY, maxZ - minZ];
+
+        const center = [
+          (minX + maxX) / 2,
+          (minY + maxY) / 2,
+          (minZ + maxZ) / 2,
+        ];
+
+        console.log("Bounding box:", { minX, minY, minZ, maxX, maxY, maxZ });
+        console.log("Center:", center);
+
+        // Store brain shape as dimensions
+        brainShape = dimensions;
 
         // Reorient the brain to be horizontal (neurological convention)
         // This rotates the brain so that anterior is toward the front
         brainGroup.rotation.x = -Math.PI / 2; // Rotate around X-axis to make Y point forward
 
-        // Create voxels for the brain surface
-        createBrainVoxels(voxels, shape, centerOffset, brainGroup);
+        try {
+          // Create voxels for the brain surface using MNI coordinates
+          createBrainVoxels(coordinates, center, brainGroup);
 
-        // Add the brain group to the scene
-        scene.add(brainGroup);
+          // Add the brain group to the scene
+          scene.add(brainGroup);
 
-        // Set up camera position for a good top-front-side view of the brain
-        const maxDim = Math.max(...shape);
+          // Set up camera position for a good view
+          const maxDim = Math.max(...dimensions);
 
-        // Position camera for a more zoomed-in top-front-side view
-        // X: positive (right side of brain)
-        // Y: positive (above brain)
-        // Z: negative (in front of brain)
-        camera.position.set(maxDim * 0.8, maxDim * 0.7, -maxDim * 0.6);
+          // Position camera for a more zoomed-in top-front-side view
+          camera.position.set(maxDim * 0.8, maxDim * 0.7, -maxDim * 0.6);
 
-        // Look at the center of the brain
-        camera.lookAt(0, 0, 0);
-        controls.update();
+          // Look at the center of the brain
+          camera.lookAt(0, 0, 0);
+          controls.update();
 
-        // Update voxel count
-        document.getElementById("voxel-count").textContent = voxels.length;
+          // Update coordinate count
+          document.getElementById("coordinate-count").textContent =
+            coordinates.length;
 
-        // Add info about orientation to the info panel
-        const infoDiv = document.getElementById("info");
-        const orientationInfo = document.createElement("p");
-        orientationInfo.innerHTML =
-          "Orientation: <span style='color:#444444'>X (R→L)</span>, <span style='color:#666666'>Y (A→P)</span>, <span style='color:#888888'>Z (S→I)</span>";
-        infoDiv.appendChild(orientationInfo);
+          // Update dimensions in the info panel
+          document.getElementById("dimensions").textContent = `${Math.round(
+            dimensions[0]
+          )}mm × ${Math.round(dimensions[1])}mm × ${Math.round(
+            dimensions[2]
+          )}mm`;
 
-        // Add legend for color coding
-        const legend = document.createElement("div");
-        legend.className = "legend";
-        legend.innerHTML = `
-          <p><strong>Legend:</strong></p>
-          <p><span class="color-box" style="background-color:#888888"></span> Whole Brain Surface</p>
-        `;
-        infoDiv.appendChild(legend);
+          // Add info about orientation to the info panel
+          const infoDiv = document.getElementById("info");
+          const orientationInfo = document.createElement("p");
+          orientationInfo.innerHTML =
+            "Orientation: <span style='color:#444444'>X (R→L)</span>, <span style='color:#666666'>Y (A→P)</span>, <span style='color:#888888'>Z (S→I)</span>";
+          infoDiv.appendChild(orientationInfo);
 
-        // Show rotation toggle button after brain is loaded
-        document.getElementById("rotation-toggle").style.display = "block";
-        document.getElementById("split-brain-toggle").style.display = "block";
+          // Add coordinate system info
+          const coordinateInfo = document.createElement("p");
+          coordinateInfo.innerHTML =
+            "Coordinate system: <strong>MNI152</strong>";
+          infoDiv.appendChild(coordinateInfo);
+
+          // Add bounding box info
+          const boundingInfo = document.createElement("p");
+          boundingInfo.innerHTML = `MNI Bounds: X(${Math.round(
+            minX
+          )} to ${Math.round(maxX)}), Y(${Math.round(minY)} to ${Math.round(
+            maxY
+          )}), Z(${Math.round(minZ)} to ${Math.round(maxZ)})`;
+          infoDiv.appendChild(boundingInfo);
+
+          // Add legend for color coding
+          const legend = document.createElement("div");
+          legend.className = "legend";
+          legend.innerHTML = `
+            <p><strong>Legend:</strong></p>
+            <p><span class="color-box" style="background-color:#888888"></span> Whole Brain Surface</p>
+          `;
+          infoDiv.appendChild(legend);
+
+          // Show rotation toggle button after brain is loaded
+          document.getElementById("rotation-toggle").style.display = "block";
+          document.getElementById("split-brain-toggle").style.display = "block";
+        } catch (error) {
+          console.error("Error creating brain visualization:", error);
+          document.getElementById("loading").textContent =
+            "Error creating brain visualization: " + error.message;
+        }
       }
 
-      // Create voxels for the brain surface
-      function createBrainVoxels(voxels, shape, centerOffset, brainGroup) {
+      // Create voxels for the brain surface using MNI coordinates
+      function createBrainVoxels(coordinates, center, brainGroup) {
         console.log(
-          `Creating voxels for ${voxels.length} surface coordinates...`
+          `Creating voxels for ${coordinates.length} surface coordinates...`
         );
 
-        // Create a box for each voxel
+        // Validate input
+        if (
+          !coordinates ||
+          !Array.isArray(coordinates) ||
+          coordinates.length === 0
+        ) {
+          throw new Error("Invalid coordinates array");
+        }
+
+        if (!center || !Array.isArray(center) || center.length !== 3) {
+          throw new Error("Invalid center point");
+        }
+
+        // Create a box for each coordinate
         const boxSize = 0.92; // Slightly smaller to create visible gaps
         const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
 
         // Create a material that better shows the brain's contours with grayscale theme
-        // and responds well to omnidirectional lighting
         const material = new THREE.MeshStandardMaterial({
           color: 0x888888,
           roughness: 0.7,
@@ -579,36 +716,53 @@
           flatShading: true,
         });
 
-        // Filter voxels based on split brain state
-        const filteredVoxels = isBrainSplit
-          ? voxels.filter((voxel) => voxel[0] <= shape[0] / 2)
-          : voxels;
+        // Filter coordinates based on split brain state
+        const filteredCoordinates = isBrainSplit
+          ? coordinates.filter(
+              (coord) =>
+                Array.isArray(coord) && coord.length === 3 && coord[0] <= 0
+            ) // In MNI, midline is at x=0
+          : coordinates.filter(
+              (coord) => Array.isArray(coord) && coord.length === 3
+            );
+
+        if (filteredCoordinates.length === 0) {
+          throw new Error("No valid coordinates after filtering");
+        }
+
+        console.log(
+          `Using ${filteredCoordinates.length} coordinates after filtering`
+        );
 
         // Use instanced mesh for better performance
         brainInstancedMesh = new THREE.InstancedMesh(
           boxGeometry,
           material,
-          filteredVoxels.length
+          filteredCoordinates.length
         );
 
         // Set matrix for each instance
         const matrix = new THREE.Matrix4();
-        for (let i = 0; i < filteredVoxels.length; i++) {
-          const voxel = filteredVoxels[i];
-          const [x, y, z] = voxel;
+        const scale = 0.1; // Scale factor to make the brain a reasonable size
 
-          matrix.setPosition(
-            x + centerOffset[0],
-            y + centerOffset[1],
-            z + centerOffset[2]
-          );
+        for (let i = 0; i < filteredCoordinates.length; i++) {
+          const coord = filteredCoordinates[i];
+          const [x, y, z] = coord;
 
+          // Position relative to center and scale down for better visualization
+          // MNI coordinates are in mm, so we scale down by a factor to fit in the scene
+          const posX = (x - center[0]) * scale;
+          const posY = (y - center[1]) * scale;
+          const posZ = (z - center[2]) * scale;
+
+          matrix.setPosition(posX, posY, posZ);
           brainInstancedMesh.setMatrixAt(i, matrix);
 
-          // Set color based on height with more subtle grayscale tones
-          const heightRatio = y / shape[1];
-          // Create grayscale value with less variation for more uniform appearance
-          const grayValue = 0.6 + 0.2 * heightRatio;
+          // Set color based on height (Y in MNI) with more subtle grayscale tones
+          // Higher Y values (more anterior) will be lighter
+          const yRange = 200; // Approximate range of Y values in MNI
+          const heightRatio = (y + 100) / yRange; // Normalize to 0-1 range
+          const grayValue = 0.5 + 0.3 * heightRatio; // Adjust for good contrast
           const color = new THREE.Color(grayValue, grayValue, grayValue);
           brainInstancedMesh.setColorAt(i, color);
         }
@@ -623,15 +777,36 @@
         brainGroup.add(brainInstancedMesh);
 
         // Add edges with reduced number (only some voxels get edges)
-        createSimplifiedEdges(filteredVoxels, shape, centerOffset, brainGroup);
+        createSimplifiedEdges(filteredCoordinates, center, brainGroup);
 
         console.log(
-          "Surface voxels rendered with enhanced lighting for gyri visibility"
+          "Surface coordinates rendered with enhanced lighting for gyri visibility"
         );
       }
 
-      // Create simplified edges (only for some voxels)
-      function createSimplifiedEdges(voxels, shape, centerOffset, brainGroup) {
+      // Create simplified edges (only for some coordinates)
+      function createSimplifiedEdges(coordinates, center, brainGroup) {
+        console.log("Creating simplified edges...");
+
+        // Validate input
+        if (
+          !coordinates ||
+          !Array.isArray(coordinates) ||
+          coordinates.length === 0
+        ) {
+          console.warn(
+            "Invalid coordinates array for edges, skipping edge creation"
+          );
+          return;
+        }
+
+        if (!center || !Array.isArray(center) || center.length !== 3) {
+          console.warn(
+            "Invalid center point for edges, skipping edge creation"
+          );
+          return;
+        }
+
         // Create a merged geometry for edges
         const edgePositions = [];
 
@@ -660,18 +835,36 @@
           [-halfSize, -halfSize, halfSize, -halfSize, halfSize, halfSize],
         ];
 
-        // Only add edges for voxels at regular intervals (reduces number of edges)
-        const edgeInterval = 4; // Only show edges for every 4th voxel
+        // Only add edges for coordinates at regular intervals (reduces number of edges)
+        const edgeInterval = 4; // Only show edges for every 4th coordinate
+        const scale = 0.1; // Same scale factor as in createBrainVoxels
 
-        for (let i = 0; i < voxels.length; i++) {
-          // Skip some voxels to reduce edge count
+        let edgeCount = 0;
+        for (let i = 0; i < coordinates.length; i++) {
+          // Skip some coordinates to reduce edge count
           if (i % edgeInterval !== 0) continue;
 
-          const voxel = voxels[i];
-          const [x, y, z] = voxel;
-          const posX = x + centerOffset[0];
-          const posY = y + centerOffset[1];
-          const posZ = z + centerOffset[2];
+          const coord = coordinates[i];
+          if (!Array.isArray(coord) || coord.length !== 3) {
+            continue; // Skip invalid coordinates
+          }
+
+          const [x, y, z] = coord;
+          if (
+            typeof x !== "number" ||
+            typeof y !== "number" ||
+            typeof z !== "number" ||
+            isNaN(x) ||
+            isNaN(y) ||
+            isNaN(z)
+          ) {
+            continue; // Skip coordinates with non-numeric values
+          }
+
+          // Position relative to center and scale down
+          const posX = (x - center[0]) * scale;
+          const posY = (y - center[1]) * scale;
+          const posZ = (z - center[2]) * scale;
 
           // Add each edge
           for (const [x1, y1, z1, x2, y2, z2] of edgeDefinitions) {
@@ -684,7 +877,16 @@
               posZ + z2
             );
           }
+
+          edgeCount++;
         }
+
+        if (edgePositions.length === 0) {
+          console.warn("No valid edges created, skipping edge rendering");
+          return;
+        }
+
+        console.log(`Created edges for ${edgeCount} coordinates`);
 
         // Create the geometry
         const edgeGeometry = new THREE.BufferGeometry();
@@ -705,7 +907,7 @@
         brainEdges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
         brainGroup.add(brainEdges);
 
-        console.log("Added simplified edges to selected voxels");
+        console.log("Added simplified edges to selected coordinates");
       }
 
       // Update brain visualization based on split state
@@ -721,15 +923,32 @@
           }
         }
 
-        // Calculate center offset
-        const centerOffset = [
-          -brainShape[0] / 2,
-          -brainShape[1] / 2,
-          -brainShape[2] / 2,
+        // Calculate center of brain coordinates
+        let minX = Infinity,
+          minY = Infinity,
+          minZ = Infinity;
+        let maxX = -Infinity,
+          maxY = -Infinity,
+          maxZ = -Infinity;
+
+        for (const coord of brainCoordinates) {
+          const [x, y, z] = coord;
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          minZ = Math.min(minZ, z);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+          maxZ = Math.max(maxZ, z);
+        }
+
+        const center = [
+          (minX + maxX) / 2,
+          (minY + maxY) / 2,
+          (minZ + maxZ) / 2,
         ];
 
-        // Recreate brain voxels with filtered data
-        createBrainVoxels(brainVoxels, brainShape, centerOffset, brainGroup);
+        // Recreate brain coordinates with filtered data
+        createBrainVoxels(brainCoordinates, center, brainGroup);
 
         // Recreate all active areas
         for (const areaName in activeAreas) {
@@ -737,7 +956,7 @@
             addAreaVoxels(
               areaName,
               activeAreas[areaName].voxels,
-              activeAreas[areaName].shape,
+              center,
               areaColors[areaName]
             );
           }
@@ -761,7 +980,7 @@
             availableAreas = data.areas.map((area, index) => {
               return {
                 name: area.name,
-                file: `brodmann_areas/${area.voxel_filename}`,
+                file: `brodmann_areas/${area.mni_filename}`, // Use mni_filename instead of voxel_filename
                 description: area.name,
                 index: area.index,
               };
@@ -784,12 +1003,12 @@
             availableAreas = [
               {
                 name: "dlpfc",
-                file: "dlpfc_atlas_voxels.json",
+                file: "dlpfc_mni_coordinates.json", // Updated to MNI coordinates
                 description: "Dorsolateral Prefrontal Cortex",
               },
               {
                 name: "broca",
-                file: "broca_atlas_voxels.json",
+                file: "broca_mni_coordinates.json", // Updated to MNI coordinates
                 description: "Broca's Area",
               },
             ];
@@ -917,19 +1136,43 @@
             return response.json();
           })
           .then((data) => {
-            // Store the area data
+            // Calculate center of brain coordinates for positioning
+            let minX = Infinity,
+              minY = Infinity,
+              minZ = Infinity;
+            let maxX = -Infinity,
+              maxY = -Infinity,
+              maxZ = -Infinity;
+
+            for (const coord of brainCoordinates) {
+              const [x, y, z] = coord;
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              minZ = Math.min(minZ, z);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+              maxZ = Math.max(maxZ, z);
+            }
+
+            const center = [
+              (minX + maxX) / 2,
+              (minY + maxY) / 2,
+              (minZ + maxZ) / 2,
+            ];
+
+            // Store the area data - check for coordinates key first (MNI format), then voxels (old format)
             activeAreas[area.name] = {
               active: true,
-              voxels: data.voxels,
-              shape: data.shape,
+              voxels: data.coordinates || data.voxels, // Support both coordinates and voxels keys
+              center: center,
               mesh: null,
             };
 
             // Add the area to visualization
             addAreaVoxels(
               area.name,
-              data.voxels,
-              data.shape,
+              activeAreas[area.name].voxels,
+              center,
               areaColors[area.name]
             );
 
@@ -957,22 +1200,21 @@
       }
 
       // Function to add area voxels to the visualization
-      function addAreaVoxels(areaName, voxels, shape, color) {
-        console.log(`Adding ${voxels.length} voxels for ${areaName}...`);
+      function addAreaVoxels(areaName, coordinates, center, color) {
+        console.log(
+          `Adding ${coordinates.length} coordinates for ${areaName}...`
+        );
 
-        // Calculate center offset to match the main brain
-        const centerOffset = [-shape[0] / 2, -shape[1] / 2, -shape[2] / 2];
+        // Filter coordinates based on split brain state
+        const filteredCoordinates = isBrainSplit
+          ? coordinates.filter((coord) => coord[0] <= 0) // In MNI, midline is at x=0
+          : coordinates;
 
-        // Filter voxels based on split brain state
-        const filteredVoxels = isBrainSplit
-          ? voxels.filter((voxel) => voxel[0] <= shape[0] / 2)
-          : voxels;
-
-        // Create a box for each voxel
+        // Create a box for each coordinate
         const boxSize = 0.92; // Same size as main brain voxels
         const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
 
-        // Create a material for the area voxels
+        // Create a material for the area coordinates
         const material = new THREE.MeshStandardMaterial({
           color: color,
           roughness: 0.6,
@@ -988,34 +1230,36 @@
         const instancedMesh = new THREE.InstancedMesh(
           boxGeometry,
           material,
-          filteredVoxels.length
+          filteredCoordinates.length
         );
 
         // Set matrix for each instance
         const matrix = new THREE.Matrix4();
-        for (let i = 0; i < filteredVoxels.length; i++) {
-          const voxel = filteredVoxels[i];
-          const [x, y, z] = voxel;
+        const scale = 0.1; // Same scale factor as in createBrainVoxels
 
-          matrix.setPosition(
-            x + centerOffset[0],
-            y + centerOffset[1],
-            z + centerOffset[2]
-          );
+        for (let i = 0; i < filteredCoordinates.length; i++) {
+          const coord = filteredCoordinates[i];
+          const [x, y, z] = coord;
 
+          // Position relative to center and scale down
+          const posX = (x - center[0]) * scale;
+          const posY = (y - center[1]) * scale;
+          const posZ = (z - center[2]) * scale;
+
+          matrix.setPosition(posX, posY, posZ);
           instancedMesh.setMatrixAt(i, matrix);
         }
 
         // Update instance matrix
         instancedMesh.instanceMatrix.needsUpdate = true;
 
-        // Add the area voxels to the brain group
+        // Add the area coordinates to the brain group
         brainGroup.add(instancedMesh);
 
         // Store reference to the mesh
         activeAreas[areaName].mesh = instancedMesh;
 
-        console.log(`${areaName} voxels added with custom color`);
+        console.log(`${areaName} coordinates added with custom color`);
       }
 
       // Function to update the legend based on active areas
