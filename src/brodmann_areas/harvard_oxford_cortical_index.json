@@ -1,0 +1,342 @@
+{
+  "description": "Index of all Harvard-Oxford cortical regions",
+  "total_areas": 48,
+  "areas": [
+    {
+      "index": 1,
+      "name": "Frontal Pole",
+      "voxel_filename": "HO_Cort_Frontal_Pole_voxels.json",
+      "mni_filename": "HO_Cort_Frontal_Pole_mni.json",
+      "image_filename": "HO_Cort_Frontal_Pole.png"
+    },
+    {
+      "index": 2,
+      "name": "Insular Cortex",
+      "voxel_filename": "HO_Cort_Insular_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Insular_Cortex_mni.json",
+      "image_filename": "HO_Cort_Insular_Cortex.png"
+    },
+    {
+      "index": 3,
+      "name": "Superior Frontal Gyrus",
+      "voxel_filename": "HO_Cort_Superior_Frontal_Gyrus_voxels.json",
+      "mni_filename": "HO_Cort_Superior_Frontal_Gyrus_mni.json",
+      "image_filename": "HO_Cort_Superior_Frontal_Gyrus.png"
+    },
+    {
+      "index": 4,
+      "name": "Middle Frontal Gyrus",
+      "voxel_filename": "HO_Cort_Middle_Frontal_Gyrus_voxels.json",
+      "mni_filename": "HO_Cort_Middle_Frontal_Gyrus_mni.json",
+      "image_filename": "HO_Cort_Middle_Frontal_Gyrus.png"
+    },
+    {
+      "index": 5,
+      "name": "Inferior Frontal Gyrus, pars triangularis",
+      "voxel_filename": "HO_Cort_Inferior_Frontal_Gyrus,_pars_triangularis_voxels.json",
+      "mni_filename": "HO_Cort_Inferior_Frontal_Gyrus,_pars_triangularis_mni.json",
+      "image_filename": "HO_Cort_Inferior_Frontal_Gyrus,_pars_triangularis.png"
+    },
+    {
+      "index": 6,
+      "name": "Inferior Frontal Gyrus, pars opercularis",
+      "voxel_filename": "HO_Cort_Inferior_Frontal_Gyrus,_pars_opercularis_voxels.json",
+      "mni_filename": "HO_Cort_Inferior_Frontal_Gyrus,_pars_opercularis_mni.json",
+      "image_filename": "HO_Cort_Inferior_Frontal_Gyrus,_pars_opercularis.png"
+    },
+    {
+      "index": 7,
+      "name": "Precentral Gyrus",
+      "voxel_filename": "HO_Cort_Precentral_Gyrus_voxels.json",
+      "mni_filename": "HO_Cort_Precentral_Gyrus_mni.json",
+      "image_filename": "HO_Cort_Precentral_Gyrus.png"
+    },
+    {
+      "index": 8,
+      "name": "Temporal Pole",
+      "voxel_filename": "HO_Cort_Temporal_Pole_voxels.json",
+      "mni_filename": "HO_Cort_Temporal_Pole_mni.json",
+      "image_filename": "HO_Cort_Temporal_Pole.png"
+    },
+    {
+      "index": 9,
+      "name": "Superior Temporal Gyrus, anterior division",
+      "voxel_filename": "HO_Cort_Superior_Temporal_Gyrus,_anterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Superior_Temporal_Gyrus,_anterior_division_mni.json",
+      "image_filename": "HO_Cort_Superior_Temporal_Gyrus,_anterior_division.png"
+    },
+    {
+      "index": 10,
+      "name": "Superior Temporal Gyrus, posterior division",
+      "voxel_filename": "HO_Cort_Superior_Temporal_Gyrus,_posterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Superior_Temporal_Gyrus,_posterior_division_mni.json",
+      "image_filename": "HO_Cort_Superior_Temporal_Gyrus,_posterior_division.png"
+    },
+    {
+      "index": 11,
+      "name": "Middle Temporal Gyrus, anterior division",
+      "voxel_filename": "HO_Cort_Middle_Temporal_Gyrus,_anterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Middle_Temporal_Gyrus,_anterior_division_mni.json",
+      "image_filename": "HO_Cort_Middle_Temporal_Gyrus,_anterior_division.png"
+    },
+    {
+      "index": 12,
+      "name": "Middle Temporal Gyrus, posterior division",
+      "voxel_filename": "HO_Cort_Middle_Temporal_Gyrus,_posterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Middle_Temporal_Gyrus,_posterior_division_mni.json",
+      "image_filename": "HO_Cort_Middle_Temporal_Gyrus,_posterior_division.png"
+    },
+    {
+      "index": 13,
+      "name": "Middle Temporal Gyrus, temporooccipital part",
+      "voxel_filename": "HO_Cort_Middle_Temporal_Gyrus,_temporooccipital_part_voxels.json",
+      "mni_filename": "HO_Cort_Middle_Temporal_Gyrus,_temporooccipital_part_mni.json",
+      "image_filename": "HO_Cort_Middle_Temporal_Gyrus,_temporooccipital_part.png"
+    },
+    {
+      "index": 14,
+      "name": "Inferior Temporal Gyrus, anterior division",
+      "voxel_filename": "HO_Cort_Inferior_Temporal_Gyrus,_anterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Inferior_Temporal_Gyrus,_anterior_division_mni.json",
+      "image_filename": "HO_Cort_Inferior_Temporal_Gyrus,_anterior_division.png"
+    },
+    {
+      "index": 15,
+      "name": "Inferior Temporal Gyrus, posterior division",
+      "voxel_filename": "HO_Cort_Inferior_Temporal_Gyrus,_posterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Inferior_Temporal_Gyrus,_posterior_division_mni.json",
+      "image_filename": "HO_Cort_Inferior_Temporal_Gyrus,_posterior_division.png"
+    },
+    {
+      "index": 16,
+      "name": "Inferior Temporal Gyrus, temporooccipital part",
+      "voxel_filename": "HO_Cort_Inferior_Temporal_Gyrus,_temporooccipital_part_voxels.json",
+      "mni_filename": "HO_Cort_Inferior_Temporal_Gyrus,_temporooccipital_part_mni.json",
+      "image_filename": "HO_Cort_Inferior_Temporal_Gyrus,_temporooccipital_part.png"
+    },
+    {
+      "index": 17,
+      "name": "Postcentral Gyrus",
+      "voxel_filename": "HO_Cort_Postcentral_Gyrus_voxels.json",
+      "mni_filename": "HO_Cort_Postcentral_Gyrus_mni.json",
+      "image_filename": "HO_Cort_Postcentral_Gyrus.png"
+    },
+    {
+      "index": 18,
+      "name": "Superior Parietal Lobule",
+      "voxel_filename": "HO_Cort_Superior_Parietal_Lobule_voxels.json",
+      "mni_filename": "HO_Cort_Superior_Parietal_Lobule_mni.json",
+      "image_filename": "HO_Cort_Superior_Parietal_Lobule.png"
+    },
+    {
+      "index": 19,
+      "name": "Supramarginal Gyrus, anterior division",
+      "voxel_filename": "HO_Cort_Supramarginal_Gyrus,_anterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Supramarginal_Gyrus,_anterior_division_mni.json",
+      "image_filename": "HO_Cort_Supramarginal_Gyrus,_anterior_division.png"
+    },
+    {
+      "index": 20,
+      "name": "Supramarginal Gyrus, posterior division",
+      "voxel_filename": "HO_Cort_Supramarginal_Gyrus,_posterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Supramarginal_Gyrus,_posterior_division_mni.json",
+      "image_filename": "HO_Cort_Supramarginal_Gyrus,_posterior_division.png"
+    },
+    {
+      "index": 21,
+      "name": "Angular Gyrus",
+      "voxel_filename": "HO_Cort_Angular_Gyrus_voxels.json",
+      "mni_filename": "HO_Cort_Angular_Gyrus_mni.json",
+      "image_filename": "HO_Cort_Angular_Gyrus.png"
+    },
+    {
+      "index": 22,
+      "name": "Lateral Occipital Cortex, superior division",
+      "voxel_filename": "HO_Cort_Lateral_Occipital_Cortex,_superior_division_voxels.json",
+      "mni_filename": "HO_Cort_Lateral_Occipital_Cortex,_superior_division_mni.json",
+      "image_filename": "HO_Cort_Lateral_Occipital_Cortex,_superior_division.png"
+    },
+    {
+      "index": 23,
+      "name": "Lateral Occipital Cortex, inferior division",
+      "voxel_filename": "HO_Cort_Lateral_Occipital_Cortex,_inferior_division_voxels.json",
+      "mni_filename": "HO_Cort_Lateral_Occipital_Cortex,_inferior_division_mni.json",
+      "image_filename": "HO_Cort_Lateral_Occipital_Cortex,_inferior_division.png"
+    },
+    {
+      "index": 24,
+      "name": "Intracalcarine Cortex",
+      "voxel_filename": "HO_Cort_Intracalcarine_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Intracalcarine_Cortex_mni.json",
+      "image_filename": "HO_Cort_Intracalcarine_Cortex.png"
+    },
+    {
+      "index": 25,
+      "name": "Frontal Medial Cortex",
+      "voxel_filename": "HO_Cort_Frontal_Medial_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Frontal_Medial_Cortex_mni.json",
+      "image_filename": "HO_Cort_Frontal_Medial_Cortex.png"
+    },
+    {
+      "index": 26,
+      "name": "Juxtapositional Lobule Cortex (formerly Supplementary Motor Cortex)",
+      "voxel_filename": "HO_Cort_Juxtapositional_Lobule_Cortex_(formerly_Supplementary_Motor_Cortex)_voxels.json",
+      "mni_filename": "HO_Cort_Juxtapositional_Lobule_Cortex_(formerly_Supplementary_Motor_Cortex)_mni.json",
+      "image_filename": "HO_Cort_Juxtapositional_Lobule_Cortex_(formerly_Supplementary_Motor_Cortex).png"
+    },
+    {
+      "index": 27,
+      "name": "Subcallosal Cortex",
+      "voxel_filename": "HO_Cort_Subcallosal_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Subcallosal_Cortex_mni.json",
+      "image_filename": "HO_Cort_Subcallosal_Cortex.png"
+    },
+    {
+      "index": 28,
+      "name": "Paracingulate Gyrus",
+      "voxel_filename": "HO_Cort_Paracingulate_Gyrus_voxels.json",
+      "mni_filename": "HO_Cort_Paracingulate_Gyrus_mni.json",
+      "image_filename": "HO_Cort_Paracingulate_Gyrus.png"
+    },
+    {
+      "index": 29,
+      "name": "Cingulate Gyrus, anterior division",
+      "voxel_filename": "HO_Cort_Cingulate_Gyrus,_anterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Cingulate_Gyrus,_anterior_division_mni.json",
+      "image_filename": "HO_Cort_Cingulate_Gyrus,_anterior_division.png"
+    },
+    {
+      "index": 30,
+      "name": "Cingulate Gyrus, posterior division",
+      "voxel_filename": "HO_Cort_Cingulate_Gyrus,_posterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Cingulate_Gyrus,_posterior_division_mni.json",
+      "image_filename": "HO_Cort_Cingulate_Gyrus,_posterior_division.png"
+    },
+    {
+      "index": 31,
+      "name": "Precuneous Cortex",
+      "voxel_filename": "HO_Cort_Precuneous_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Precuneous_Cortex_mni.json",
+      "image_filename": "HO_Cort_Precuneous_Cortex.png"
+    },
+    {
+      "index": 32,
+      "name": "Cuneal Cortex",
+      "voxel_filename": "HO_Cort_Cuneal_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Cuneal_Cortex_mni.json",
+      "image_filename": "HO_Cort_Cuneal_Cortex.png"
+    },
+    {
+      "index": 33,
+      "name": "Frontal Orbital Cortex",
+      "voxel_filename": "HO_Cort_Frontal_Orbital_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Frontal_Orbital_Cortex_mni.json",
+      "image_filename": "HO_Cort_Frontal_Orbital_Cortex.png"
+    },
+    {
+      "index": 34,
+      "name": "Parahippocampal Gyrus, anterior division",
+      "voxel_filename": "HO_Cort_Parahippocampal_Gyrus,_anterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Parahippocampal_Gyrus,_anterior_division_mni.json",
+      "image_filename": "HO_Cort_Parahippocampal_Gyrus,_anterior_division.png"
+    },
+    {
+      "index": 35,
+      "name": "Parahippocampal Gyrus, posterior division",
+      "voxel_filename": "HO_Cort_Parahippocampal_Gyrus,_posterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Parahippocampal_Gyrus,_posterior_division_mni.json",
+      "image_filename": "HO_Cort_Parahippocampal_Gyrus,_posterior_division.png"
+    },
+    {
+      "index": 36,
+      "name": "Lingual Gyrus",
+      "voxel_filename": "HO_Cort_Lingual_Gyrus_voxels.json",
+      "mni_filename": "HO_Cort_Lingual_Gyrus_mni.json",
+      "image_filename": "HO_Cort_Lingual_Gyrus.png"
+    },
+    {
+      "index": 37,
+      "name": "Temporal Fusiform Cortex, anterior division",
+      "voxel_filename": "HO_Cort_Temporal_Fusiform_Cortex,_anterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Temporal_Fusiform_Cortex,_anterior_division_mni.json",
+      "image_filename": "HO_Cort_Temporal_Fusiform_Cortex,_anterior_division.png"
+    },
+    {
+      "index": 38,
+      "name": "Temporal Fusiform Cortex, posterior division",
+      "voxel_filename": "HO_Cort_Temporal_Fusiform_Cortex,_posterior_division_voxels.json",
+      "mni_filename": "HO_Cort_Temporal_Fusiform_Cortex,_posterior_division_mni.json",
+      "image_filename": "HO_Cort_Temporal_Fusiform_Cortex,_posterior_division.png"
+    },
+    {
+      "index": 39,
+      "name": "Temporal Occipital Fusiform Cortex",
+      "voxel_filename": "HO_Cort_Temporal_Occipital_Fusiform_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Temporal_Occipital_Fusiform_Cortex_mni.json",
+      "image_filename": "HO_Cort_Temporal_Occipital_Fusiform_Cortex.png"
+    },
+    {
+      "index": 40,
+      "name": "Occipital Fusiform Gyrus",
+      "voxel_filename": "HO_Cort_Occipital_Fusiform_Gyrus_voxels.json",
+      "mni_filename": "HO_Cort_Occipital_Fusiform_Gyrus_mni.json",
+      "image_filename": "HO_Cort_Occipital_Fusiform_Gyrus.png"
+    },
+    {
+      "index": 41,
+      "name": "Frontal Opercular Cortex",
+      "voxel_filename": "HO_Cort_Frontal_Opercular_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Frontal_Opercular_Cortex_mni.json",
+      "image_filename": "HO_Cort_Frontal_Opercular_Cortex.png"
+    },
+    {
+      "index": 42,
+      "name": "Central Opercular Cortex",
+      "voxel_filename": "HO_Cort_Central_Opercular_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Central_Opercular_Cortex_mni.json",
+      "image_filename": "HO_Cort_Central_Opercular_Cortex.png"
+    },
+    {
+      "index": 43,
+      "name": "Parietal Opercular Cortex",
+      "voxel_filename": "HO_Cort_Parietal_Opercular_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Parietal_Opercular_Cortex_mni.json",
+      "image_filename": "HO_Cort_Parietal_Opercular_Cortex.png"
+    },
+    {
+      "index": 44,
+      "name": "Planum Polare",
+      "voxel_filename": "HO_Cort_Planum_Polare_voxels.json",
+      "mni_filename": "HO_Cort_Planum_Polare_mni.json",
+      "image_filename": "HO_Cort_Planum_Polare.png"
+    },
+    {
+      "index": 45,
+      "name": "Heschl's Gyrus (includes H1 and H2)",
+      "voxel_filename": "HO_Cort_Heschl's_Gyrus_(includes_H1_and_H2)_voxels.json",
+      "mni_filename": "HO_Cort_Heschl's_Gyrus_(includes_H1_and_H2)_mni.json",
+      "image_filename": "HO_Cort_Heschl's_Gyrus_(includes_H1_and_H2).png"
+    },
+    {
+      "index": 46,
+      "name": "Planum Temporale",
+      "voxel_filename": "HO_Cort_Planum_Temporale_voxels.json",
+      "mni_filename": "HO_Cort_Planum_Temporale_mni.json",
+      "image_filename": "HO_Cort_Planum_Temporale.png"
+    },
+    {
+      "index": 47,
+      "name": "Supracalcarine Cortex",
+      "voxel_filename": "HO_Cort_Supracalcarine_Cortex_voxels.json",
+      "mni_filename": "HO_Cort_Supracalcarine_Cortex_mni.json",
+      "image_filename": "HO_Cort_Supracalcarine_Cortex.png"
+    },
+    {
+      "index": 48,
+      "name": "Occipital Pole",
+      "voxel_filename": "HO_Cort_Occipital_Pole_voxels.json",
+      "mni_filename": "HO_Cort_Occipital_Pole_mni.json",
+      "image_filename": "HO_Cort_Occipital_Pole.png"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "description": "Master index of all brain atlases",
+  "atlases": [
+    {
+      "name": "Brodmann Areas (Talairach)",
+      "description": "Brodmann areas from Talairach atlas",
+      "index_filename": "brodmann_index.json"
+    },
+    {
+      "name": "Harvard-Oxford Cortical",
+      "description": "Harvard-Oxford cortical regions",
+      "index_filename": "harvard_oxford_cortical_index.json"
+    },
+    {
+      "name": "Harvard-Oxford Subcortical",
+      "description": "Harvard-Oxford subcortical regions",
+      "index_filename": "harvard_oxford_subcortical_index.json"
+    }
+  ]
+}

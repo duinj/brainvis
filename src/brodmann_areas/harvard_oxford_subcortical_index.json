@@ -1,0 +1,153 @@
+{
+  "description": "Index of all Harvard-Oxford subcortical regions",
+  "total_areas": 21,
+  "areas": [
+    {
+      "index": 1,
+      "name": "Left Cerebral White Matter",
+      "voxel_filename": "HO_Sub_Left_Cerebral_White_Matter_voxels.json",
+      "mni_filename": "HO_Sub_Left_Cerebral_White_Matter_mni.json",
+      "image_filename": "HO_Sub_Left_Cerebral_White_Matter.png"
+    },
+    {
+      "index": 2,
+      "name": "Left Cerebral Cortex",
+      "voxel_filename": "HO_Sub_Left_Cerebral_Cortex_voxels.json",
+      "mni_filename": "HO_Sub_Left_Cerebral_Cortex_mni.json",
+      "image_filename": "HO_Sub_Left_Cerebral_Cortex.png"
+    },
+    {
+      "index": 3,
+      "name": "Left Lateral Ventricle",
+      "voxel_filename": "HO_Sub_Left_Lateral_Ventricle_voxels.json",
+      "mni_filename": "HO_Sub_Left_Lateral_Ventricle_mni.json",
+      "image_filename": "HO_Sub_Left_Lateral_Ventricle.png"
+    },
+    {
+      "index": 4,
+      "name": "Left Thalamus",
+      "voxel_filename": "HO_Sub_Left_Thalamus_voxels.json",
+      "mni_filename": "HO_Sub_Left_Thalamus_mni.json",
+      "image_filename": "HO_Sub_Left_Thalamus.png"
+    },
+    {
+      "index": 5,
+      "name": "Left Caudate",
+      "voxel_filename": "HO_Sub_Left_Caudate_voxels.json",
+      "mni_filename": "HO_Sub_Left_Caudate_mni.json",
+      "image_filename": "HO_Sub_Left_Caudate.png"
+    },
+    {
+      "index": 6,
+      "name": "Left Putamen",
+      "voxel_filename": "HO_Sub_Left_Putamen_voxels.json",
+      "mni_filename": "HO_Sub_Left_Putamen_mni.json",
+      "image_filename": "HO_Sub_Left_Putamen.png"
+    },
+    {
+      "index": 7,
+      "name": "Left Pallidum",
+      "voxel_filename": "HO_Sub_Left_Pallidum_voxels.json",
+      "mni_filename": "HO_Sub_Left_Pallidum_mni.json",
+      "image_filename": "HO_Sub_Left_Pallidum.png"
+    },
+    {
+      "index": 8,
+      "name": "Brain-Stem",
+      "voxel_filename": "HO_Sub_Brain-Stem_voxels.json",
+      "mni_filename": "HO_Sub_Brain-Stem_mni.json",
+      "image_filename": "HO_Sub_Brain-Stem.png"
+    },
+    {
+      "index": 9,
+      "name": "Left Hippocampus",
+      "voxel_filename": "HO_Sub_Left_Hippocampus_voxels.json",
+      "mni_filename": "HO_Sub_Left_Hippocampus_mni.json",
+      "image_filename": "HO_Sub_Left_Hippocampus.png"
+    },
+    {
+      "index": 10,
+      "name": "Left Amygdala",
+      "voxel_filename": "HO_Sub_Left_Amygdala_voxels.json",
+      "mni_filename": "HO_Sub_Left_Amygdala_mni.json",
+      "image_filename": "HO_Sub_Left_Amygdala.png"
+    },
+    {
+      "index": 11,
+      "name": "Left Accumbens",
+      "voxel_filename": "HO_Sub_Left_Accumbens_voxels.json",
+      "mni_filename": "HO_Sub_Left_Accumbens_mni.json",
+      "image_filename": "HO_Sub_Left_Accumbens.png"
+    },
+    {
+      "index": 12,
+      "name": "Right Cerebral White Matter",
+      "voxel_filename": "HO_Sub_Right_Cerebral_White_Matter_voxels.json",
+      "mni_filename": "HO_Sub_Right_Cerebral_White_Matter_mni.json",
+      "image_filename": "HO_Sub_Right_Cerebral_White_Matter.png"
+    },
+    {
+      "index": 13,
+      "name": "Right Cerebral Cortex",
+      "voxel_filename": "HO_Sub_Right_Cerebral_Cortex_voxels.json",
+      "mni_filename": "HO_Sub_Right_Cerebral_Cortex_mni.json",
+      "image_filename": "HO_Sub_Right_Cerebral_Cortex.png"
+    },
+    {
+      "index": 14,
+      "name": "Right Lateral Ventricle",
+      "voxel_filename": "HO_Sub_Right_Lateral_Ventricle_voxels.json",
+      "mni_filename": "HO_Sub_Right_Lateral_Ventricle_mni.json",
+      "image_filename": "HO_Sub_Right_Lateral_Ventricle.png"
+    },
+    {
+      "index": 15,
+      "name": "Right Thalamus",
+      "voxel_filename": "HO_Sub_Right_Thalamus_voxels.json",
+      "mni_filename": "HO_Sub_Right_Thalamus_mni.json",
+      "image_filename": "HO_Sub_Right_Thalamus.png"
+    },
+    {
+      "index": 16,
+      "name": "Right Caudate",
+      "voxel_filename": "HO_Sub_Right_Caudate_voxels.json",
+      "mni_filename": "HO_Sub_Right_Caudate_mni.json",
+      "image_filename": "HO_Sub_Right_Caudate.png"
+    },
+    {
+      "index": 17,
+      "name": "Right Putamen",
+      "voxel_filename": "HO_Sub_Right_Putamen_voxels.json",
+      "mni_filename": "HO_Sub_Right_Putamen_mni.json",
+      "image_filename": "HO_Sub_Right_Putamen.png"
+    },
+    {
+      "index": 18,
+      "name": "Right Pallidum",
+      "voxel_filename": "HO_Sub_Right_Pallidum_voxels.json",
+      "mni_filename": "HO_Sub_Right_Pallidum_mni.json",
+      "image_filename": "HO_Sub_Right_Pallidum.png"
+    },
+    {
+      "index": 19,
+      "name": "Right Hippocampus",
+      "voxel_filename": "HO_Sub_Right_Hippocampus_voxels.json",
+      "mni_filename": "HO_Sub_Right_Hippocampus_mni.json",
+      "image_filename": "HO_Sub_Right_Hippocampus.png"
+    },
+    {
+      "index": 20,
+      "name": "Right Amygdala",
+      "voxel_filename": "HO_Sub_Right_Amygdala_voxels.json",
+      "mni_filename": "HO_Sub_Right_Amygdala_mni.json",
+      "image_filename": "HO_Sub_Right_Amygdala.png"
+    },
+    {
+      "index": 21,
+      "name": "Right Accumbens",
+      "voxel_filename": "HO_Sub_Right_Accumbens_voxels.json",
+      "mni_filename": "HO_Sub_Right_Accumbens_mni.json",
+      "image_filename": "HO_Sub_Right_Accumbens.png"
+    }
+  ]
+}

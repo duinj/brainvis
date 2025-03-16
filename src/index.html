@@ -51,7 +51,8 @@
         z-index: 100;
       }
       #rotation-toggle,
-      #split-brain-toggle {
+      #split-brain-toggle,
+      #axes-toggle {
         position: absolute;
         bottom: 20px;
         padding: 10px 15px;
@@ -62,6 +63,7 @@
         font-size: 14px;
         cursor: pointer;
         transition: background-color 0.3s;
+        display: none; /* Initially hidden */
       }
       #rotation-toggle {
         left: 20px;
@@ -69,8 +71,12 @@
       #split-brain-toggle {
         left: 150px;
       }
+      #axes-toggle {
+        left: 280px;
+      }
       #rotation-toggle:hover,
-      #split-brain-toggle:hover {
+      #split-brain-toggle:hover,
+      #axes-toggle:hover {
         background-color: rgba(240, 240, 240, 0.9);
       }
       /* New styles for area controls */
@@ -128,6 +134,7 @@
     <div id="loading">Loading brain MNI coordinates...</div>
     <button id="rotation-toggle">Stop Rotation</button>
     <button id="split-brain-toggle">Split Brain</button>
+    <button id="axes-toggle">Show Axes</button>
 
     <!-- New area controls panel -->
     <div id="area-controls">
@@ -150,6 +157,8 @@
       let brainShape = []; // Store brain dimensions
       let brainInstancedMesh; // Reference to brain instanced mesh
       let brainEdges; // Reference to brain edges
+      let axesHelper; // Reference to axes helper
+      let showAxes = false; // Track if axes are shown
 
       // New variables for general area handling
       let availableAreas = []; // List of available areas
@@ -178,12 +187,12 @@
 
         // Create camera
         camera = new THREE.PerspectiveCamera(
-          60,
+          75, // Increased FOV for a wider view
           window.innerWidth / window.innerHeight,
           0.1,
           2000
         );
-        camera.position.set(100, 100, 100);
+        camera.position.set(100, 0, 0); // Initial position before brain loads (from side)
 
         // Create renderer
         renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -195,10 +204,14 @@
         controls.enableDamping = true;
         controls.dampingFactor = 0.25;
         controls.screenSpacePanning = true; // Enable proper panning
-        controls.minDistance = 10;
+        controls.minDistance = 5; // Allow closer zoom
         controls.maxDistance = 500;
         controls.maxPolarAngle = Math.PI; // Allow full vertical rotation
         controls.rotateSpeed = 0.7; // Adjust rotation speed
+
+        // Set initial target to origin
+        controls.target.set(0, 0, 0);
+        controls.update();
 
         // Add event listeners to detect user interaction with controls
         controls.addEventListener("start", function () {
@@ -243,6 +256,9 @@
         // Set up split brain toggle button
         setupSplitBrainToggle();
 
+        // Set up axes toggle button
+        setupAxesToggle();
+
         // Set up area search functionality
         setupAreaSearch();
 
@@ -275,6 +291,16 @@
         });
       }
 
+      // Set up axes toggle button
+      function setupAxesToggle() {
+        const toggleButton = document.getElementById("axes-toggle");
+        toggleButton.addEventListener("click", function () {
+          showAxes = !showAxes;
+          updateAxesVisibility();
+          updateAxesButton();
+        });
+      }
+
       // Update rotation button text based on current state
       function updateRotationButton() {
         const toggleButton = document.getElementById("rotation-toggle");
@@ -295,6 +321,16 @@
         }
       }
 
+      // Update axes toggle button text based on current state
+      function updateAxesButton() {
+        const toggleButton = document.getElementById("axes-toggle");
+        if (showAxes) {
+          toggleButton.textContent = "Hide Axes";
+        } else {
+          toggleButton.textContent = "Show Axes";
+        }
+      }
+
       // Handle window resize
       function onWindowResize() {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -308,10 +344,15 @@
 
         // Apply auto-rotation if enabled and user hasn't interacted
         if (autoRotate && brainGroup) {
-          // Rotate around the vertical axis (y-axis) for horizontal side-to-side spin
-          // Note: Since we've rotated the brain group with brainGroup.rotation.x = -Math.PI / 2,
+          // Rotate around the vertical axis for horizontal side-to-side spin
+          // Since we've rotated the brain group with brainGroup.rotation.x = -Math.PI / 2,
           // we need to rotate around the z-axis to get a horizontal spin
-          brainGroup.rotation.z += 0.001; // Very slow horizontal rotation
+          brainGroup.rotation.z += 0.005; // Increased rotation speed for better visibility
+
+          // If axes are visible, rotate them with the brain
+          if (axesHelper && showAxes) {
+            axesHelper.rotation.z = brainGroup.rotation.z;
+          }
         }
 
         controls.update();
@@ -624,8 +665,9 @@
           // Set up camera position for a good view
           const maxDim = Math.max(...dimensions);
 
-          // Position camera for a more zoomed-in top-front-side view
-          camera.position.set(maxDim * 0.8, maxDim * 0.7, -maxDim * 0.6);
+          // Position camera for an EXTREMELY zoomed-in side view
+          // This positions the camera extremely close to the brain from the side (lateral view)
+          camera.position.set(maxDim * 0.15, 0, 0); // Extremely close position for maximum zoom
 
           // Look at the center of the brain
           camera.lookAt(0, 0, 0);
@@ -676,6 +718,16 @@
           // Show rotation toggle button after brain is loaded
           document.getElementById("rotation-toggle").style.display = "block";
           document.getElementById("split-brain-toggle").style.display = "block";
+          document.getElementById("axes-toggle").style.display = "block";
+
+          // Create axes helper (initially hidden)
+          axesHelper = createAxesHelper();
+          scene.add(axesHelper);
+          updateAxesVisibility();
+
+          // Ensure auto-rotation is enabled initially
+          autoRotate = true;
+          updateRotationButton();
         } catch (error) {
           console.error("Error creating brain visualization:", error);
           document.getElementById("loading").textContent =
@@ -968,7 +1020,7 @@
       // New function to load available areas
       function loadAvailableAreas() {
         // Fetch the list of available area JSON files from index.json
-        fetch("index.json")
+        fetch("index2.json")
           .then((response) => {
             if (!response.ok) {
               throw new Error("Could not load index.json");
@@ -1270,6 +1322,16 @@
           <p><span class="color-box" style="background-color:#888888"></span> Whole Brain Surface</p>
         `;
 
+        // Add axes information if visible
+        if (showAxes) {
+          legend.innerHTML += `
+            <p><strong>Coordinate Axes:</strong></p>
+            <p><span class="color-box" style="background-color:#cc0000"></span> X-axis (Left/Right)</p>
+            <p><span class="color-box" style="background-color:#00cc00"></span> Y-axis (Anterior/Posterior)</p>
+            <p><span class="color-box" style="background-color:#0000cc"></span> Z-axis (Superior/Inferior)</p>
+          `;
+        }
+
         // Add active areas to legend
         for (const areaName in activeAreas) {
           if (activeAreas[areaName].active) {
@@ -1284,6 +1346,148 @@
             `;
           }
         }
+      }
+
+      // Create and add axes helper to the scene
+      function createAxesHelper() {
+        // Create a custom axes helper that's more subtle than the default
+        const axesGroup = new THREE.Group();
+
+        // Create the three axes with custom colors and size
+        const axisLength = 15; // Slightly shorter axes
+        const axisThickness = 0.4; // Thinner axes for subtlety
+
+        // X-axis (red) - Left/Right
+        const xAxisGeometry = new THREE.CylinderGeometry(
+          axisThickness,
+          axisThickness,
+          axisLength,
+          8
+        );
+        const xAxisMaterial = new THREE.MeshBasicMaterial({
+          color: 0xcc0000,
+          transparent: true,
+          opacity: 0.8,
+        });
+        const xAxis = new THREE.Mesh(xAxisGeometry, xAxisMaterial);
+        xAxis.rotation.z = -Math.PI / 2; // Rotate to align with x-axis
+        xAxis.position.x = axisLength / 2; // Position at origin with length extending in positive direction
+
+        // Y-axis (green) - Anterior/Posterior
+        const yAxisGeometry = new THREE.CylinderGeometry(
+          axisThickness,
+          axisThickness,
+          axisLength,
+          8
+        );
+        const yAxisMaterial = new THREE.MeshBasicMaterial({
+          color: 0x00cc00,
+          transparent: true,
+          opacity: 0.8,
+        });
+        const yAxis = new THREE.Mesh(yAxisGeometry, yAxisMaterial);
+        yAxis.position.y = axisLength / 2; // Position at origin with length extending in positive direction
+
+        // Z-axis (blue) - Superior/Inferior
+        const zAxisGeometry = new THREE.CylinderGeometry(
+          axisThickness,
+          axisThickness,
+          axisLength,
+          8
+        );
+        const zAxisMaterial = new THREE.MeshBasicMaterial({
+          color: 0x0000cc,
+          transparent: true,
+          opacity: 0.8,
+        });
+        const zAxis = new THREE.Mesh(zAxisGeometry, zAxisMaterial);
+        zAxis.rotation.x = Math.PI / 2; // Rotate to align with z-axis
+        zAxis.position.z = axisLength / 2; // Position at origin with length extending in positive direction
+
+        // Add labels for each axis
+        const createLabel = (text, position, color) => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 64;
+          canvas.height = 32;
+          const context = canvas.getContext("2d");
+          context.fillStyle = color;
+          context.font = "24px Arial";
+          context.fillText(text, 0, 24);
+
+          const texture = new THREE.CanvasTexture(canvas);
+          const material = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+          });
+          const sprite = new THREE.Sprite(material);
+          sprite.position.copy(position);
+          sprite.scale.set(5, 2.5, 1);
+          return sprite;
+        };
+
+        // Add labels at the end of each axis
+        const xLabel = createLabel(
+          "X",
+          new THREE.Vector3(axisLength + 2, 0, 0),
+          "#cc0000"
+        );
+        const yLabel = createLabel(
+          "Y",
+          new THREE.Vector3(0, axisLength + 2, 0),
+          "#00cc00"
+        );
+        const zLabel = createLabel(
+          "Z",
+          new THREE.Vector3(0, 0, axisLength + 2),
+          "#0000cc"
+        );
+
+        // Add all elements to the axes group
+        axesGroup.add(xAxis);
+        axesGroup.add(yAxis);
+        axesGroup.add(zAxis);
+        axesGroup.add(xLabel);
+        axesGroup.add(yLabel);
+        axesGroup.add(zLabel);
+
+        // Position the axes at the origin (0,0,0) in the scene
+        // This will align it properly with the brain
+        axesGroup.position.set(0, 0, 0);
+
+        // Apply the same rotation as the brain group to maintain correct orientation
+        axesGroup.rotation.x = -Math.PI / 2;
+
+        // Initially hide the axes
+        axesGroup.visible = showAxes;
+
+        return axesGroup;
+      }
+
+      // Update axes visibility based on toggle state
+      function updateAxesVisibility() {
+        if (!axesHelper) {
+          // Create axes helper if it doesn't exist
+          axesHelper = createAxesHelper();
+          scene.add(axesHelper);
+        }
+
+        // Update visibility
+        axesHelper.visible = showAxes;
+
+        // Ensure axes have the same rotation as the brain group
+        if (brainGroup && axesHelper) {
+          // Keep the base rotation (x rotation) the same
+          axesHelper.rotation.x = -Math.PI / 2;
+          // But sync the z rotation with the brain for auto-rotation
+          axesHelper.rotation.z = brainGroup.rotation.z;
+
+          // Position the axes at a fixed offset from the center
+          // With extreme zoom, we need to position them closer to the center
+          axesHelper.position.set(-2, -2, -2);
+        }
+
+        // Update the legend to include/exclude axes information
+        updateLegend();
       }
 
       // Initialize and start animation
