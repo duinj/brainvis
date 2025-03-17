@@ -1,5 +1,5 @@
 {
-  "description": "Index of all ROI regions",
+  "description": "Index of all ROI regions (in MNI space)",
   "total_areas": 37,
   "areas": [
     {
