@@ -3,9 +3,11 @@ import json
 import os
 import glob
 import nibabel as nib
+from nilearn import image
 
-# Create output directory
+# Create output directories
 os.makedirs('roi_jsons', exist_ok=True)
+os.makedirs('rois_mni', exist_ok=True)
 
 def process_nii_file(nii_path):
     """Process a single .nii file and return its data"""
@@ -67,23 +69,70 @@ def process_nii_file(nii_path):
         "mni_filename": mni_filename
     }
 
-def main():
-    # Get all .nii and .nii.gz files in the roi_nii folder
-    nii_files = glob.glob('roi_nii/*.nii*')
+def standardize_to_mni(nii_path):
+    """Standardize NIfTI file to 2mm MNI space"""
+    print(f"Standardizing {os.path.basename(nii_path)}")
     
-    if not nii_files:
-        print("No .nii files found in roi_nii folder!")
+    # Load the image
+    img = nib.load(nii_path)
+    
+    # Define target affine for 2mm MNI space
+    target_affine = np.array([
+        [-2., 0., 0., 90.],
+        [0., 2., 0., -126.],
+        [0., 0., 2., -72.],
+        [0., 0., 0., 1.]
+    ])
+    
+    # Define target shape for 2mm MNI space
+    target_shape = (91, 109, 91)
+    
+    # Resample image to standard MNI space
+    mni_img = image.resample_img(
+        img,
+        target_affine=target_affine,
+        target_shape=target_shape,
+        interpolation='nearest'  # Use nearest neighbor for ROI masks
+    )
+    
+    return mni_img
+
+def main():
+    # First pass: standardize to MNI if needed
+    if not os.path.exists('rois_mni') or not os.listdir('rois_mni'):
+        print("Standardizing ROIs to MNI space...")
+        nii_files = glob.glob('rois/*.nii*')
+        
+        if not nii_files:
+            print("No .nii files found in rois folder!")
+            return
+        
+        for nii_path in nii_files:
+            try:
+                mni_img = standardize_to_mni(nii_path)
+                output_path = os.path.join('rois_mni', os.path.basename(nii_path))
+                nib.save(mni_img, output_path)
+                print(f"Saved standardized version to {output_path}")
+            except Exception as e:
+                print(f"Error standardizing {nii_path}: {e}")
+    
+    # Second pass: process standardized files to JSON
+    print("\nProcessing standardized ROIs to JSON...")
+    mni_files = glob.glob('rois_mni/*.nii*')
+    
+    if not mni_files:
+        print("No standardized .nii files found!")
         return
     
     # Create index data
     roi_index = {
-        "description": "Index of all ROI regions",
-        "total_areas": len(nii_files),
+        "description": "Index of all ROI regions (in MNI space)",
+        "total_areas": len(mni_files),
         "areas": []
     }
     
-    # Process each .nii file
-    for nii_path in nii_files:
+    # Process each standardized file
+    for nii_path in mni_files:
         try:
             area_data = process_nii_file(nii_path)
             roi_index["areas"].append(area_data)
