@@ -1020,7 +1020,7 @@
       // New function to load available areas
       function loadAvailableAreas() {
         // Fetch the list of available area JSON files from index.json
-        fetch("index2.json")
+        fetch("index3.json")
           .then((response) => {
             if (!response.ok) {
               throw new Error("Could not load index.json");
@@ -1032,7 +1032,7 @@
             availableAreas = data.areas.map((area, index) => {
               return {
                 name: area.name,
-                file: `brodmann_areas/${area.mni_filename}`, // Use mni_filename instead of voxel_filename
+                file: `roi_jsons/${area.mni_filename}`, // Use mni_filename instead of voxel_filename
                 description: area.name,
                 index: area.index,
               };

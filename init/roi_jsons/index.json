@@ -1,0 +1,191 @@
+{
+  "description": "Index of all ROI regions",
+  "total_areas": 37,
+  "areas": [
+    {
+      "name": "VMPFC_mask_neurosynth_liberal",
+      "voxel_filename": "VMPFC_mask_neurosynth_liberal_voxels.json",
+      "mni_filename": "VMPFC_mask_neurosynth_liberal_mni.json"
+    },
+    {
+      "name": "AmyMask",
+      "voxel_filename": "AmyMask_voxels.json",
+      "mni_filename": "AmyMask_mni.json"
+    },
+    {
+      "name": "InhibitionNetwork",
+      "voxel_filename": "InhibitionNetwork_voxels.json",
+      "mni_filename": "InhibitionNetwork_mni.json"
+    },
+    {
+      "name": "dmPFC",
+      "voxel_filename": "dmPFC_voxels.json",
+      "mni_filename": "dmPFC_mni.json"
+    },
+    {
+      "name": "rvlPFC_Lee_8mm_roi",
+      "voxel_filename": "rvlPFC_Lee_8mm_roi_voxels.json",
+      "mni_filename": "rvlPFC_Lee_8mm_roi_mni.json"
+    },
+    {
+      "name": "l_TPJ",
+      "voxel_filename": "l_TPJ_voxels.json",
+      "mni_filename": "l_TPJ_mni.json"
+    },
+    {
+      "name": "R_DCA",
+      "voxel_filename": "R_DCA_voxels.json",
+      "mni_filename": "R_DCA_mni.json"
+    },
+    {
+      "name": "lspm1261stc_pain_ant10insulae04",
+      "voxel_filename": "lspm1261stc_pain_ant10insulae04_voxels.json",
+      "mni_filename": "lspm1261stc_pain_ant10insulae04_mni.json"
+    },
+    {
+      "name": "P72_lesion-mask_MNI",
+      "voxel_filename": "P72_lesion-mask_MNI_voxels.json",
+      "mni_filename": "P72_lesion-mask_MNI_mni.json"
+    },
+    {
+      "name": "accumbens",
+      "voxel_filename": "accumbens_voxels.json",
+      "mni_filename": "accumbens_mni.json"
+    },
+    {
+      "name": "risk_mask",
+      "voxel_filename": "risk_mask_voxels.json",
+      "mni_filename": "risk_mask_mni.json"
+    },
+    {
+      "name": "IPS_mask",
+      "voxel_filename": "IPS_mask_voxels.json",
+      "mni_filename": "IPS_mask_mni.json"
+    },
+    {
+      "name": "ACC_sphere",
+      "voxel_filename": "ACC_sphere_voxels.json",
+      "mni_filename": "ACC_sphere_mni.json"
+    },
+    {
+      "name": "vmPFC_bin",
+      "voxel_filename": "vmPFC_bin_voxels.json",
+      "mni_filename": "vmPFC_bin_mni.json"
+    },
+    {
+      "name": "Left_CMA",
+      "voxel_filename": "Left_CMA_voxels.json",
+      "mni_filename": "Left_CMA_mni.json"
+    },
+    {
+      "name": "RFFA_roi",
+      "voxel_filename": "RFFA_roi_voxels.json",
+      "mni_filename": "RFFA_roi_mni.json"
+    },
+    {
+      "name": "BiMPFC_NeuroSynth",
+      "voxel_filename": "BiMPFC_NeuroSynth_voxels.json",
+      "mni_filename": "BiMPFC_NeuroSynth_mni.json"
+    },
+    {
+      "name": "MPFC_roi",
+      "voxel_filename": "MPFC_roi_voxels.json",
+      "mni_filename": "MPFC_roi_mni.json"
+    },
+    {
+      "name": "LFFA_roi",
+      "voxel_filename": "LFFA_roi_voxels.json",
+      "mni_filename": "LFFA_roi_mni.json"
+    },
+    {
+      "name": "l_AI",
+      "voxel_filename": "l_AI_voxels.json",
+      "mni_filename": "l_AI_mni.json"
+    },
+    {
+      "name": "MNI_res-epi_label-aHPC_mask",
+      "voxel_filename": "MNI_res-epi_label-aHPC_mask_voxels.json",
+      "mni_filename": "MNI_res-epi_label-aHPC_mask_mni.json"
+    },
+    {
+      "name": "AMY_right_lbprob",
+      "voxel_filename": "AMY_right_lbprob_voxels.json",
+      "mni_filename": "AMY_right_lbprob_mni.json"
+    },
+    {
+      "name": "cingulate-mask",
+      "voxel_filename": "cingulate-mask_voxels.json",
+      "mni_filename": "cingulate-mask_mni.json"
+    },
+    {
+      "name": "MNI_res-epi_label-VTASN_mask",
+      "voxel_filename": "MNI_res-epi_label-VTASN_mask_voxels.json",
+      "mni_filename": "MNI_res-epi_label-VTASN_mask_mni.json"
+    },
+    {
+      "name": "Ftest_zTransform_vmPFC",
+      "voxel_filename": "Ftest_zTransform_vmPFC_voxels.json",
+      "mni_filename": "Ftest_zTransform_vmPFC_mni.json"
+    },
+    {
+      "name": "full_ROIs",
+      "voxel_filename": "full_ROIs_voxels.json",
+      "mni_filename": "full_ROIs_mni.json"
+    },
+    {
+      "name": "oxford_vstriatum",
+      "voxel_filename": "oxford_vstriatum_voxels.json",
+      "mni_filename": "oxford_vstriatum_mni.json"
+    },
+    {
+      "name": "SMA_mask_0001",
+      "voxel_filename": "SMA_mask_0001_voxels.json",
+      "mni_filename": "SMA_mask_0001_mni.json"
+    },
+    {
+      "name": "les_mask_mni_it_upd",
+      "voxel_filename": "les_mask_mni_it_upd_voxels.json",
+      "mni_filename": "les_mask_mni_it_upd_mni.json"
+    },
+    {
+      "name": "EAc_2mm",
+      "voxel_filename": "EAc_2mm_voxels.json",
+      "mni_filename": "EAc_2mm_mni.json"
+    },
+    {
+      "name": "rsrIFGMMN",
+      "voxel_filename": "rsrIFGMMN_voxels.json",
+      "mni_filename": "rsrIFGMMN_mni.json"
+    },
+    {
+      "name": "hippho50",
+      "voxel_filename": "hippho50_voxels.json",
+      "mni_filename": "hippho50_mni.json"
+    },
+    {
+      "name": "AI_R_sphere",
+      "voxel_filename": "AI_R_sphere_voxels.json",
+      "mni_filename": "AI_R_sphere_mni.json"
+    },
+    {
+      "name": "AI_L_sphere",
+      "voxel_filename": "AI_L_sphere_voxels.json",
+      "mni_filename": "AI_L_sphere_mni.json"
+    },
+    {
+      "name": "AMY_left_lbprob",
+      "voxel_filename": "AMY_left_lbprob_voxels.json",
+      "mni_filename": "AMY_left_lbprob_mni.json"
+    },
+    {
+      "name": "dmPFC_Collette_8mm_roi",
+      "voxel_filename": "dmPFC_Collette_8mm_roi_voxels.json",
+      "mni_filename": "dmPFC_Collette_8mm_roi_mni.json"
+    },
+    {
+      "name": "FEF_mask",
+      "voxel_filename": "FEF_mask_voxels.json",
+      "mni_filename": "FEF_mask_mni.json"
+    }
+  ]
+}
